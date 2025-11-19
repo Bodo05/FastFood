@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Ricerca</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="cliente.html">FAST FOOD</a>
+  </div>
+</nav>
+
+<div class="container mt-3">
+  <h4>Ricerca ristoranti / piatti</h4>
+
+  <div class="row g-2">
+    <div class="col-md-4"><input id="q" class="form-control" placeholder="Nome ristorante"></div>
+    <div class="col-md-4"><input id="piatto" class="form-control" placeholder="Nome piatto"></div>
+    <div class="col-md-4"><input id="ingrediente" class="form-control" placeholder="Ingrediente"></div>
+  </div>
+  <div class="row g-2 mt-2">
+    <div class="col-md-3"><input id="categoria" class="form-control" placeholder="Categoria"></div>
+    <div class="col-md-3"><input id="prezzoMax" class="form-control" placeholder="Prezzo max"></div>
+    <div class="col-md-3"><input id="allergia" class="form-control" placeholder="Allergene da escludere"></div>
+    <div class="col-md-3"><input id="luogo" class="form-control" placeholder="Luogo / città"></div>
+  </div>
+
+  <div class="mt-3">
+    <button class="btn btn-primary" onclick="doSearch()">Cerca</button>
+  </div>
+
+  <hr>
+  <div id="results"></div>
+</div>
+
+<script>
+async function doSearch() {
+    const q = document.getElementById('q').value.trim();
+    const piatto = document.getElementById('piatto').value.trim();
+    const ingrediente = document.getElementById('ingrediente').value.trim();
+    const categoria = document.getElementById('categoria').value.trim();
+    const prezzoMax = document.getElementById('prezzoMax').value.trim();
+    const allergia = document.getElementById('allergia').value.trim();
+    const luogo = document.getElementById('luogo').value.trim();
+
+    const params = new URLSearchParams();
+    if(q) params.append('q', q);
+    if(piatto) params.append('piatto', piatto);
+    if(ingrediente) params.append('ingrediente', ingrediente);
+    if(categoria) params.append('categoria', categoria);
+    if(prezzoMax) params.append('prezzoMax', prezzoMax);
+    if(allergia) params.append('allergia', allergia);
+    if(luogo) params.append('luogo', luogo);
+
+    try {
+        const res = await fetch(`http://localhost:3000/search?${params.toString()}`);
+        if(!res.ok) throw new Error('Errore ricerca');
+        const arr = await res.json();
+        renderResults(arr);
+    } catch(err) {
+        console.error(err);
+        alert('Errore effettuando la ricerca');
+    }
+}
+
+function renderResults(arr) {
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+    if(!arr || arr.length === 0) { container.innerHTML = '<p>Nessun risultato</p>'; return; }
+
+    arr.forEach(risto => {
+        const rDiv = document.createElement('div'); rDiv.className = 'card mb-2';
+        const piattiHtml = (risto.piatti || []).map(p =>
+            `<div class="col-md-3"><div class="card p-1 mb-1">
+                <img src="${p.thumb||''}" style="height:80px;object-fit:cover;width:100%">
+                <div class="p-1"><strong>${p.nome}</strong><div>€${p.price ?? '—'}</div><div>${p.prepTime ?? '—'} min</div></div>
+            </div></div>`).join('');
+        rDiv.innerHTML = `
+            <div class="card-body">
+                <h5>${risto.nomeRistorante}</h5>
+                <p>${risto.piva || ''} — ${risto.telefono || ''} — ${risto.indirizzo || ''}</p>
+                <div class="row">${piattiHtml}</div>
+            </div>`;
+        container.appendChild(rDiv);
+    });
+}
+</script>
+</body>
+</html>

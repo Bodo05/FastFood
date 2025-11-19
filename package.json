@@ -1,0 +1,29 @@
+{
+  "name": "fastfood",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon ./back-end/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bodo05/FastFood.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bodo05/FastFood/issues"
+  },
+  "homepage": "https://github.com/Bodo05/FastFood#readme",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "mongoose": "^8.19.2",
+    "nodemon": "^3.1.10",
+    "swagger-autogen": "^2.23.7",
+    "swagger-ui-express": "^5.0.1"
+  }
+}

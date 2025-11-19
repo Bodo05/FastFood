@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Login - Fast Food</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+.tab-button { cursor:pointer; padding:10px 20px; border-bottom:3px solid transparent; font-weight:600; }
+.tab-active { border-bottom:3px solid #0d6efd; color:#0d6efd; }
+</style>
+</head>
+<body class="bg-primary">
+<div class="container">
+  <div class="row justify-content-center align-items-center min-vh-100">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card shadow">
+        <div class="card-body p-4">
+          <div class="text-center mb-3">
+            <h2 class="text-primary">FAST FOOD</h2>
+            <p class="text-muted">Login</p>
+          </div>
+
+          <div class="d-flex justify-content-around mb-4 border-bottom pb-2">
+            <div id="tabCliente" class="tab-button tab-active" onclick="setLoginType('cliente')">Cliente</div>
+            <div id="tabRistoratore" class="tab-button" onclick="setLoginType('ristoratore')">Ristoratore</div>
+          </div>
+
+          <form id="loginForm" onsubmit="event.preventDefault(); login();">
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" id="email" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" id="password" class="form-control" required>
+            </div>
+            <div class="d-grid mb-3">
+              <button type="submit" class="btn btn-primary btn-lg">Accedi</button>
+            </div>
+            <div class="text-center">
+              <p class="text-muted">Non hai un account? <a href="registrazione.html">Registrati</a></p>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="loginClienteRistoratore.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
