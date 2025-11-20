@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cliente</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrello - FastFood</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
         <a class="navbar-brand" href="cliente.html">FastFood</a>
@@ -26,7 +27,7 @@
                     <a class="nav-link" href="ricercaAvanzata.html">Ricerca Avanzata</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="carrello.html">Carrello</a>
+                    <a class="nav-link active" href="carrello.html">Carrello</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="gestioneCliente.html">Gestione</a>
@@ -47,8 +48,24 @@
     </nav>
 
 <div class="container mt-4">
-  <h4>Piatti dalle tue categorie preferite</h4>
-  <div id="piattiContainer" class="row g-3 mt-2"></div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Il Tuo Carrello</h3>
+        <div>
+            <button class="btn btn-outline-danger me-2" onclick="svuotaCarrello()">Svuota Carrello</button>
+            <button class="btn btn-success" onclick="procediAllOrdine()">Procedi all'Ordine</button>
+        </div>
+    </div>
+
+    <div id="carrelloContainer" class="mb-4"></div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Totale: €<span id="totale">0.00</span></h4>
+                <button class="btn btn-success btn-lg" onclick="procediAllOrdine()">Completa Ordine</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -62,10 +79,10 @@ function effettuaRicercaNavbar() {
 }
 
 function logout() {
-  localStorage.clear();
-  window.location.href = 'login.html';
+    localStorage.clear();
+    window.location.href = 'login.html';
 }
 </script>
-<script src="cliente.js"></script>
+<script src="carrello.js"></script>
 </body>
 </html>

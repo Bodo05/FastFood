@@ -1,218 +1,483 @@
-// index.js
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
 
-const mongoURL = "mongodb+srv://admin:admin@cluster0.fczult8.mongodb.net/"; // usa la tua
+const mongoURL = "mongodb+srv://admin:admin@cluster0.fczult8.mongodb.net/";
+const dbName = "fastfood";
 const port = 3000;
-const client = new MongoClient(mongoURL, { useNewUrlParser: true, useUnifiedTopology: true });
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Start server + connect DB
-async function startServer() {
-    try {
-        await client.connect();
-        console.log("Connesso al database MongoDB");
-        app.listen(port, () => console.log(`Server in ascolto sulla porta ${port}`));
-    } catch (err) {
-        console.error("Errore connessione DB:", err);
-        process.exit(1);
-    }
-}
-startServer();
+const client = new MongoClient(mongoURL);
 
-// ----------------- HELPERS -----------------
 function toObjectId(id) {
-    try { return new ObjectId(id); }
-    catch { return null; }
+  try { return new ObjectId(id); } catch { return null; }
 }
 
-// ----------------- ROUTE: CLIENTE -----------------
+async function start() {
+  try {
+    await client.connect();
+    console.log("Connesso a MongoDB");
+    app.listen(port, () => console.log(`Server su http://localhost:${port}`));
+  } catch (err) {
+    console.error("Errore DB:", err);
+    process.exit(1);
+  }
+}
+start();
 
-// Registrazione cliente
+app.get('/meals', async (req, res) => {
+  try {
+    const meals = await client.db(dbName).collection('meals').find({}).toArray();
+    res.json(meals);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore lettura meals' });
+  }
+});
+
+app.get('/categorie', async (req, res) => {
+  try {
+    const categorie = await client.db(dbName).collection('meals').distinct('strCategory');
+    res.json(categorie.filter(Boolean));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore lettura categorie' });
+  }
+});
+
+app.get('/ristoranti', async (req, res) => {
+  try {
+    const ristoranti = await client.db(dbName).collection('ristoratori').find({}).toArray();
+    res.json(ristoranti);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore lettura ristoranti' });
+  }
+});
+
 app.post('/cliente', async (req, res) => {
-    try {
-        const { nome, cognome, email, password, preferenze = [], pagamento = null, datiCarta = null } = req.body;
+  try {
+    const { nome, cognome, email, password, preferenze = [] } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'email e password richieste' });
 
-        // semplice controllo se esiste email
-        const exists = await client.db('fastfood').collection('clienti').findOne({ email });
-        if (exists) return res.status(400).json({ message: "Email già registrata" });
+    const col = client.db(dbName).collection('clienti');
+    const exists = await col.findOne({ email });
+    if (exists) return res.status(400).json({ message: 'Email già registrata' });
 
-        const nuovo = { nome, cognome, email, password, preferenze, pagamento, datiCarta };
-        const result = await client.db('fastfood').collection('clienti').insertOne(nuovo);
-        res.json({ _id: result.insertedId.toString() });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
+    const nuovo = { nome, cognome, email, password, preferenze, createdAt: new Date() };
+    const r = await col.insertOne(nuovo);
+    res.json({ _id: r.insertedId.toString() });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// Login cliente
 app.post('/cliente/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const cliente = await client.db('fastfood').collection('clienti').findOne({ email, password });
-        if (!cliente) return res.status(401).json({ message: "Login non valido" });
-        res.json({ _id: cliente._id.toString() });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
+  try {
+    const { email, password } = req.body;
+    const col = client.db(dbName).collection('clienti');
+    const c = await col.findOne({ email, password });
+    if (!c) return res.status(401).json({ message: 'login non valido' });
+    res.json({ _id: c._id.toString() });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// Get cliente by id
 app.get('/cliente/:id', async (req, res) => {
-    try {
-        const id = toObjectId(req.params.id);
-        if(!id) return res.status(400).json({ message: "ID non valido" });
-        const cliente = await client.db('fastfood').collection('clienti').findOne({ _id: id });
-        if(!cliente) return res.status(404).json({ message: "Cliente non trovato" });
-        res.json(cliente);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
+  try {
+    const id = toObjectId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'id non valido' });
+    const col = client.db(dbName).collection('clienti');
+    const c = await col.findOne({ _id: id }, { projection: { password: 0 } });
+    if (!c) return res.status(404).json({ message: 'Cliente non trovato' });
+    res.json(c);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// Update cliente
-app.put('/cliente/:id', async (req, res) => {
-    try {
-        const id = toObjectId(req.params.id);
-        if(!id) return res.status(400).json({ message: "ID non valido" });
-        const update = req.body;
-        await client.db('fastfood').collection('clienti').updateOne({ _id: id }, { $set: update });
-        res.json({ message: "Aggiornato" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
-});
-
-// Delete cliente
 app.delete('/cliente/:id', async (req, res) => {
-    try {
-        const id = toObjectId(req.params.id);
-        if(!id) return res.status(400).json({ message: "ID non valido" });
-        await client.db('fastfood').collection('clienti').deleteOne({ _id: id });
-        res.json({ message: "Eliminato" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
+  try {
+    const id = toObjectId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'id non valido' });
+    await client.db(dbName).collection('clienti').deleteOne({ _id: id });
+    res.json({ message: 'Eliminato' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// ----------------- ROUTE: RISTORATORE -----------------
+app.put('/cliente/:id', async (req, res) => {
+  try {
+    const id = toObjectId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'id non valido' });
+    const { nome, cognome, preferenze } = req.body;
+    const col = client.db(dbName).collection('clienti');
+    const result = await col.updateOne(
+      { _id: id },
+      { $set: { nome, cognome, preferenze } }
+    );
+    if (result.matchedCount === 0) return res.status(404).json({ message: 'Cliente non trovato' });
+    res.json({ message: 'Aggiornato' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
+});
 
-// Registrazione ristoratore
 app.post('/ristoratore', async (req, res) => {
-    try {
-        const { nomeRistorante, piva, telefono, email, password, categoria = null, piatti = [] } = req.body;
-        const exists = await client.db('fastfood').collection('ristoratori').findOne({ email });
-        if (exists) return res.status(400).json({ message: "Email già registrata" });
+  try {
+    const { nomeRistorante, piva, telefono, indirizzo, email, password, piatti = [] } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'email e password richieste' });
 
-        // ogni piatto è un oggetto: { id, nome, thumb, price, prepTime, categorie, ingredienti, allergeni }
-        const nuovo = { nomeRistorante, piva, telefono, email, password, categoria, piatti };
-        const result = await client.db('fastfood').collection('ristoratori').insertOne(nuovo);
-        res.json({ _id: result.insertedId.toString() });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
+    const col = client.db(dbName).collection('ristoratori');
+    const exists = await col.findOne({ email });
+    if (exists) return res.status(400).json({ message: 'Email già registrata' });
+
+    const nuovo = { nomeRistorante, piva, telefono, indirizzo, email, password, piatti, createdAt: new Date() };
+    const r = await col.insertOne(nuovo);
+    
+    // Crea i piatti nella collection piatti
+    if (piatti.length > 0) {
+      const piattiConRistorante = piatti.map(p => ({
+        ...p,
+        ristoranteId: r.insertedId,
+        ristoranteNome: nomeRistorante,
+        createdAt: new Date()
+      }));
+      
+      await client.db(dbName).collection('piatti').insertMany(piattiConRistorante);
     }
+    
+    res.json({ _id: r.insertedId.toString() });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// Login ristoratore
 app.post('/ristoratore/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const risto = await client.db('fastfood').collection('ristoratori').findOne({ email, password });
-        if (!risto) return res.status(401).json({ message: "Login non valido" });
-        res.json({ _id: risto._id.toString() });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
+  try {
+    const { email, password } = req.body;
+    const col = client.db(dbName).collection('ristoratori');
+    const r = await col.findOne({ email, password });
+    if (!r) return res.status(401).json({ message: 'login non valido' });
+    res.json({ _id: r._id.toString() });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// Get ristoratore by id
 app.get('/ristoratore/:id', async (req, res) => {
-    try {
-        const id = toObjectId(req.params.id);
-        if(!id) return res.status(400).json({ message: "ID non valido" });
-        const risto = await client.db('fastfood').collection('ristoratori').findOne({ _id: id });
-        if(!risto) return res.status(404).json({ message: "Ristoratore non trovato" });
-        res.json(risto);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
+  try {
+    const id = toObjectId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'id non valido' });
+    const r = await client.db(dbName).collection('ristoratori').findOne({ _id: id }, { projection: { password: 0 } });
+    if (!r) return res.status(404).json({ message: 'Ristoratore non trovato' });
+    res.json(r);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// Update ristoratore
-app.put('/ristoratore/:id', async (req, res) => {
-    try {
-        const id = toObjectId(req.params.id);
-        if(!id) return res.status(400).json({ message: "ID non valido" });
-        const update = req.body;
-        await client.db('fastfood').collection('ristoratori').updateOne({ _id: id }, { $set: update });
-        res.json({ message: "Aggiornato" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
+app.put('/ristoratore/:id/piatti', async (req, res) => {
+  try {
+    const id = toObjectId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'id non valido' });
+    const { piatti } = req.body;
+    const result = await client.db(dbName).collection('ristoratori').updateOne(
+      { _id: id },
+      { $set: { piatti } }
+    );
+    if (result.matchedCount === 0) return res.status(404).json({ message: 'Ristoratore non trovato' });
+    res.json({ message: 'Menu aggiornato' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// Delete ristoratore
-app.delete('/ristoratore/:id', async (req, res) => {
-    try {
-        const id = toObjectId(req.params.id);
-        if(!id) return res.status(400).json({ message: "ID non valido" });
-        await client.db('fastfood').collection('ristoratori').deleteOne({ _id: id });
-        res.json({ message: "Eliminato" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
-    }
+app.get('/ristoratore/:id/piatti', async (req, res) => {
+  try {
+    const id = toObjectId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'id non valido' });
+    
+    const piatti = await client.db(dbName).collection('piatti')
+      .find({ ristoranteId: id })
+      .toArray();
+    
+    res.json(piatti);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
 });
 
-// ----------------- RICERCA -----------------
-// ricerca generale ristoranti/piatti
-// query params supportati:
-// ?q=nomeRistorante (ricerca per nome ristorante)
-// &piatto=nomePiatto (ricerca ristoranti che vendono un piatto con questo nome)
-// &categoria=Categoria (categoria piatto)
-// &ingrediente=ingrediente (ricerca piatti che contengono ingrediente)
-// &prezzoMax=numero (filtra price <= prezzoMax)
-// &allergia=allergene (esclude piatti contenenti quell'allergene)
-app.get('/search', async (req, res) => {
-    try {
-        const { q, piatto, categoria, ingrediente, prezzoMax, allergia, luogo } = req.query;
+app.post('/ristoratore/:id/piatti', async (req, res) => {
+  try {
+    const id = toObjectId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'id non valido' });
+    
+    const { piatto } = req.body;
+    
+    // Trova il ristoratore per ottenere il nome
+    const ristoratore = await client.db(dbName).collection('ristoratori')
+      .findOne({ _id: id });
+    
+    if (!ristoratore) return res.status(404).json({ message: 'Ristoratore non trovato' });
+    
+    // Inserisci il piatto nella collection piatti
+    const result = await client.db(dbName).collection('piatti').insertOne({
+      ...piatto,
+      ristoranteId: id,
+      ristoranteNome: ristoratore.nomeRistorante,
+      createdAt: new Date()
+    });
+    
+    // Aggiorna anche l'array piatti nel ristoratore
+    await client.db(dbName).collection('ristoratori').updateOne(
+      { _id: id },
+      { $push: { piatti: { ...piatto, id: result.insertedId } } }
+    );
+    
+    res.json({ _id: result.insertedId, message: 'Piatto aggiunto' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore server' });
+  }
+});
 
-        // build pipeline per cercare ristoratori che hanno piatti matching (o per ricerca semplice)
-        const match = {};
+app.get('/ricerca-avanzata', async (req, res) => {
+  try {
+    const { 
+      q, 
+      tipo, 
+      categoria, 
+      ingrediente, 
+      allergene, 
+      prezzoMin, 
+      prezzoMax, 
+      ristorante,
+      luogo 
+    } = req.query;
 
-        if (q) match.nomeRistorante = { $regex: q, $options: 'i' };
-        if (luogo) match.indirizzo = { $regex: luogo, $options: 'i' }; // se salvi indirizzo nel ristoratore
-
-        // filtro su piatti: useremo $elemMatch
-        const piattiFilter = {};
-        if (piatto) piattiFilter.nome = { $regex: piatto, $options: 'i' };
-        if (categoria) piattiFilter.categoria = categoria;
-        if (ingrediente) piattiFilter.ingredienti = { $regex: ingrediente, $options: 'i' };
-        if (prezzoMax) piattiFilter.price = { $lte: Number(prezzoMax) };
-        if (allergia) piattiFilter.allergeni = { $not: { $regex: allergia, $options: 'i' } };
-
-        // Se abbiamo filtri sui piatti, aggiungiamo elemMatch
-        if (Object.keys(piattiFilter).length > 0) {
-            match.piatti = { $elemMatch: piattiFilter };
+    let pipeline = [];
+    
+    if (tipo === 'ristorante') {
+      // RICERCA RISTORANTI per nome e luogo
+      pipeline = [
+        {
+          $lookup: {
+            from: 'piatti',
+            localField: '_id',
+            foreignField: 'ristoranteId',
+            as: 'piattiMenu'
+          }
         }
+      ];
 
-        const results = await client.db('fastfood').collection('ristoratori').find(match).toArray();
-        res.json(results);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Errore server" });
+      const matchStage = {};
+      const orConditions = [];
+
+      if (q) {
+        orConditions.push(
+          { nomeRistorante: new RegExp(q, 'i') }
+        );
+      }
+
+      if (luogo) {
+        orConditions.push(
+          { indirizzo: new RegExp(luogo, 'i') }
+        );
+      }
+
+      if (orConditions.length > 0) {
+        matchStage.$or = orConditions;
+        pipeline.unshift({ $match: matchStage });
+      }
+
+      const ristoranti = await client.db(dbName).collection('ristoratori').aggregate(pipeline).toArray();
+      return res.json(ristoranti);
+
+    } else {
+      // RICERCA PIATTI
+      pipeline = [
+        {
+          $lookup: {
+            from: 'ristoratori',
+            localField: 'ristoranteId',
+            foreignField: '_id',
+            as: 'ristoranteInfo'
+          }
+        },
+        { $unwind: '$ristoranteInfo' }
+      ];
+
+      const matchStage = {};
+      const andConditions = [];
+
+      // Ricerca per nome piatto
+      if (q) {
+        andConditions.push({
+          $or: [
+            { nome: new RegExp(q, 'i') },
+            { categoria: new RegExp(q, 'i') }
+          ]
+        });
+      }
+
+      // Ricerca per categoria specifica
+      if (categoria) {
+        andConditions.push({
+          categoria: new RegExp(categoria, 'i')
+        });
+      }
+
+      // Ricerca per ingrediente
+      if (ingrediente) {
+        andConditions.push({
+          ingredienti: new RegExp(ingrediente, 'i')
+        });
+      }
+
+      // Ricerca per allergia (esclusione)
+      if (allergene) {
+        andConditions.push({
+          $or: [
+            { allergeni: { $exists: false } },
+            { allergeni: '' },
+            { allergeni: { $not: new RegExp(allergene, 'i') } }
+          ]
+        });
+      }
+
+      // Ricerca per prezzo
+      if (prezzoMin || prezzoMax) {
+        const priceCondition = {};
+        if (prezzoMin) priceCondition.$gte = parseFloat(prezzoMin);
+        if (prezzoMax) priceCondition.$lte = parseFloat(prezzoMax);
+        andConditions.push({ prezzo: priceCondition });
+      }
+
+      // Ricerca per ristorante
+      if (ristorante) {
+        andConditions.push({
+          'ristoranteInfo.nomeRistorante': new RegExp(ristorante, 'i')
+        });
+      }
+
+      // Ricerca per luogo del ristorante
+      if (luogo) {
+        andConditions.push({
+          'ristoranteInfo.indirizzo': new RegExp(luogo, 'i')
+        });
+      }
+
+      if (andConditions.length > 0) {
+        matchStage.$and = andConditions;
+        pipeline.unshift({ $match: matchStage });
+      }
+
+      const piatti = await client.db(dbName).collection('piatti').aggregate(pipeline).toArray();
+      return res.json(piatti);
     }
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore ricerca avanzata' });
+  }
+});
+
+
+app.get('/ricerca', async (req, res) => {
+  try {
+    const q = req.query.q || '';
+    if (!q) return res.json([]);
+
+    // Ricerca nei piatti
+    const piatti = await client.db(dbName).collection('piatti').aggregate([
+      {
+        $lookup: {
+          from: 'ristoratori',
+          localField: 'ristoranteId',
+          foreignField: '_id',
+          as: 'ristoranteInfo'
+        }
+      },
+      { $unwind: '$ristoranteInfo' },
+      {
+        $match: {
+          $or: [
+            { nome: new RegExp(q, 'i') },
+            { categoria: new RegExp(q, 'i') },
+            { ingredienti: new RegExp(q, 'i') }
+          ]
+        }
+      }
+    ]).toArray();
+
+    // Ricerca nei ristoranti
+    const ristoranti = await client.db(dbName).collection('ristoratori').find({
+      $or: [
+        { nomeRistorante: new RegExp(q, 'i') },
+        { indirizzo: new RegExp(q, 'i') }
+      ]
+    }).toArray();
+
+    const risultati = [
+      ...piatti.map(p => ({ ...p, tipo: 'piatto' })),
+      ...ristoranti.map(r => ({ ...r, tipo: 'ristorante' }))
+    ];
+
+    res.json(risultati);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore ricerca' });
+  }
+});
+
+app.get('/ricerca-ristorante-per-piatto', async (req, res) => {
+  try {
+    const { piatto } = req.query;
+    if (!piatto) return res.json([]);
+
+    const risultati = await client.db(dbName).collection('piatti').aggregate([
+      {
+        $match: {
+          nome: new RegExp(piatto, 'i')
+        }
+      },
+      {
+        $lookup: {
+          from: 'ristoratori',
+          localField: 'ristoranteId',
+          foreignField: '_id',
+          as: 'ristoranteInfo'
+        }
+      },
+      { $unwind: '$ristoranteInfo' },
+      {
+        $group: {
+          _id: '$ristoranteInfo._id',
+          ristorante: { $first: '$ristoranteInfo' },
+          piatti: { $push: '$$ROOT' }
+        }
+      }
+    ]).toArray();
+
+    res.json(risultati);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Errore ricerca ristorante per piatto' });
+  }
 });
