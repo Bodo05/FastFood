@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crea Piatto - FASTFOOD</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- Navigazione Semplice -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="#">FASTFOOD</a>
+        
+        <!-- Pulsante hamburger per mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Menu che si espande/contrae -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="navbar-nav">
+                <a class="nav-link" href="ristoratore.html">Home</a>
+                <a class="nav-link" href="ordini_ristoratore.html">Ordini</a>
+                <a class="nav-link" href="menu.html">Menu</a>
+                <a class="nav-link" href="profilo_ristoratore.html">Profilo</a>
+                <a class="nav-link" href="statistiche.html">Statistiche</a>
+                <a class="nav-link active" href="#">Nuovo Piatto</a>
+                <a class="nav-link text-warning" href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </div>
+</nav>
+    <!-- Contenuto Principale -->
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">Crea Nuovo Piatto</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="formPiatto">
+                            <!-- Nome -->
+                            <div class="mb-2">
+                                <label class="form-label">Nome piatto</label>
+                                <input type="text" class="form-control" id="nome" required>
+                            </div>
+
+                            <!-- Prezzo -->
+                            <div class="mb-3">
+                                <label class="form-label">Prezzo (€)</label>
+                                <input type="text" class="form-control" id="prezzo">
+                            </div>
+
+                            <!-- Tempo preparazione -->
+                            <div class="mb-3">
+                                <label class="form-label">Tempo preparazione (minuti)</label>
+                                <input type="text" class="form-control" id="tempo">
+                            </div>
+
+                            <!-- Immagine -->
+                            <div class="mb-3">
+                                <label class="form-label">URL immagine</label>
+                                <input type="url" class="form-control" id="foto">
+                                <div class="form-text">Inserisci l'URL di un'immagine del piatto</div>
+                            </div>
+
+                            <!-- Ingredienti -->
+                            <div class="mb-3">
+                                <label class="form-label">Ingredienti</label>
+                                <div class="mb-2">
+                                    <input type="text" class="form-control mb-2" id="ingrediente" placeholder="Nome ingrediente">
+                                    <button type="button" class="btn btn-success" onclick="aggiungiIngrediente()">
+                                        Aggiungi
+                                    </button>
+                                </div>
+                                <div class="mt-2 p-2 border rounded" id="listaIngredienti">
+                                    <small class="text-muted">Nessun ingrediente aggiunto</small>
+                                </div>
+                            </div>
+
+                            <!-- Categoria -->
+                            <div class="mb-3">
+                                <label class="form-label">Categoria</label>
+                                <select class="form-select" id="categoria" required>
+                                    <option value="">Scegli una categoria</option>
+                                    <option value="Breakfast">Colazione</option>
+                                    <option value="Starter">Antipasto</option>
+                                    <option value="Pasta">Pasta</option>
+                                    <option value="Beef">Manzo</option>
+                                    <option value="Chicken">Pollo</option>
+                                    <option value="Seafood">Pesce</option>
+                                    <option value="Dessert">Dessert</option>
+                                    <option value="Vegetarian">Vegetariano</option>
+                                </select>
+                            </div>
+
+                            <!-- Pulsanti -->
+                            <div class="d-flex gap-2 mt-4">
+                                <button type="button" class="btn btn-primary flex-grow-1" onclick="creaPiatto()">
+                                    Crea Piatto
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messaggi -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="messaggioToast" class="toast" role="alert">
+            <div class="toast-dy" id="toastBody"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="creaPiatto.js"></script>
+</body>
+</html>
