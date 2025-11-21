@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiche - FastFood</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <div id="navbar-placeholder"></div>
+
+    <div class="container mt-5">
+        <h2 class="mb-4">Statistiche Vendite</h2>
+        
+        <div class="row text-center mb-4">
+            <div class="col-md-6">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-header">Guadagni Totali</div>
+                    <div class="card-body">
+                        <h1 class="card-title display-4">€<span id="totaleGuadagni">0.00</span></h1>
+                        <p class="card-text">Ordini Completati</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-white bg-info mb-3">
+                    <div class="card-header">Totale Ordini</div>
+                    <div class="card-body">
+                        <h1 class="card-title display-4" id="numeroOrdini">0</h1>
+                        <p class="card-text">Consegnati con successo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">🏆 Piatti più Venduti</div>
+            <ul class="list-group list-group-flush" id="listaPopolari">
+                <li class="list-group-item text-muted text-center">Caricamento...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const rId = localStorage.getItem('_id');
+        if(!rId) location.href='login.html';
+
+        function logout() { localStorage.clear(); location.href='login.html'; }
+
+        async function loadStats() {
+            try {
+                const res = await fetch(`http://localhost:3000/ristoratore/${rId}/statistiche`);
+                const data = await res.json();
+
+                document.getElementById('totaleGuadagni').innerText = data.totaleGuadagni.toFixed(2);
+                document.getElementById('numeroOrdini').innerText = data.numeroOrdini;
+
+                const list = document.getElementById('listaPopolari');
+                list.innerHTML = '';
+                
+                if(data.classificaPiatti.length === 0) {
+                    list.innerHTML = '<li class="list-group-item text-muted">Nessun dato disponibile.</li>';
+                } else {
+                    data.classificaPiatti.forEach((p, i) => {
+                        const badge = i === 0 ? '🥇' : (i === 1 ? '🥈' : '🥉');
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                        li.innerHTML = `<span>${i < 3 ? badge : ''} <strong>${p.nome}</strong></span> 
+                                        <span class="badge bg-primary rounded-pill">${p.quantita} venduti</span>`;
+                        list.appendChild(li);
+                    });
+                }
+            } catch(e) { console.error(e); }
+        }
+        loadStats();
+    </script>
+    <script src="navbar.js"></script>
+</body>
+</html>

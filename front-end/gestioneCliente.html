@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestione Cliente</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
@@ -16,61 +16,57 @@
 
         <div class="collapse navbar-collapse" id="navbarContent">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="cliente.html">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="ricerca.html">Ricerca</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="ricercaAvanzata.html">Ricerca Avanzata</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="carrello.html">Carrello</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="gestioneCliente.html">Gestione</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="cliente.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="ricerca.html">Ricerca</a></li>
+                <li class="nav-item"><a class="nav-link" href="ricercaAvanzata.html">Ricerca Avanzata</a></li>
+                <li class="nav-item"><a class="nav-link" href="carrello.html">Carrello</a></li>
+                <li class="nav-item"><a class="nav-link active" href="gestioneCliente.html">Gestione</a></li>
             </ul>
-
             <div class="d-flex">
-                <div class="input-group me-2">
-                    <input type="text" id="navbarSearchInput" class="form-control" 
-                           placeholder="Cerca piatti, ristoranti...">
-                    <button class="btn btn-outline-light" type="button" onclick="effettuaRicercaNavbar()">
-                        🔍
-                    </button>
-                </div>
                 <button class="btn btn-outline-light" onclick="logout()">Logout</button>
             </div>
         </div>
     </nav>
 
-<div class="container mt-3">
-  <h4>Gestione account</h4>
-  <div class="mb-2"><label>Nome</label><input id="nome" class="form-control"></div>
-  <div class="mb-2"><label>Cognome</label><input id="cognome" class="form-control"></div>
-  <div class="mb-2"><label>Email</label><input id="email" class="form-control" disabled></div>
+<div class="container mt-4">
+  <div class="row">
+      <div class="col-md-5 mb-4">
+          <div class="card shadow-sm">
+              <div class="card-header bg-primary text-white">
+                  <h5 class="mb-0">Il tuo Profilo</h5>
+              </div>
+              <div class="card-body">
+                  <div class="mb-2"><label>Nome</label><input id="nome" class="form-control"></div>
+                  <div class="mb-2"><label>Cognome</label><input id="cognome" class="form-control"></div>
+                  <div class="mb-2"><label>Email</label><input id="email" class="form-control" disabled></div>
 
-  <h5>Categoria Preferita</h5>
-  <select id="categoriaPreferita" class="form-select mb-3">
-    <option value="">-- Seleziona Categoria --</option>
-  </select>
+                  <h6 class="mt-3">Categoria Preferita</h6>
+                  <select id="categoriaPreferita" class="form-select mb-3">
+                    <option value="">-- Seleziona Categoria --</option>
+                  </select>
 
-  <button class="btn btn-primary" onclick="aggiorna()">Aggiorna</button>
-  <button class="btn btn-danger ms-2" onclick="elimina()">Elimina account</button>
+                  <button class="btn btn-success w-100 mb-2" onclick="aggiorna()">Salva Modifiche</button>
+                  <button class="btn btn-danger w-100" onclick="elimina()">Elimina Account</button>
+              </div>
+          </div>
+      </div>
+
+      <div class="col-md-7">
+          <div class="card shadow-sm">
+              <div class="card-header bg-secondary text-white">
+                  <h5 class="mb-0">I Tuoi Ordini</h5>
+              </div>
+              <div class="card-body p-0">
+                  <div id="storicoOrdini" class="list-group list-group-flush">
+                      <div class="p-3 text-center text-muted">Caricamento ordini...</div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
 </div>
 
 <script>
-function effettuaRicercaNavbar() {
-    const q = document.getElementById('navbarSearchInput').value.trim();
-    if (!q) {
-        alert('Inserisci un termine di ricerca');
-        return;
-    }
-    window.location.href = `ricerca.html?q=${encodeURIComponent(q)}`;
-}
-
 const id = localStorage.getItem('_id'); if(!id) location.href='login.html';
 
 function logout() {
@@ -78,51 +74,75 @@ function logout() {
   location.href='login.html';
 }
 
-const allCategorie = [];
-
 async function loadCategorie() {
   const res = await fetch('http://localhost:3000/categorie');
   const categorie = await res.json();
-  allCategorie.push(...categorie);
+  const select = document.getElementById('categoriaPreferita');
+  select.innerHTML = '<option value="">-- Seleziona Categoria --</option>';
+  categorie.forEach(cat => {
+    const o = document.createElement('option');
+    o.value = cat;
+    o.textContent = cat;
+    select.appendChild(o);
+  });
 }
 
-async function load() {
+async function loadData() {
   await loadCategorie();
+  
+  // Carica dati profilo
   const res = await fetch(`http://localhost:3000/cliente/${id}`);
-  if(!res.ok) {
-    alert('Errore');
-    return;
-  }
+  if(!res.ok) { alert('Errore'); return; }
   const c = await res.json();
   document.getElementById('nome').value = c.nome || '';
   document.getElementById('cognome').value = c.cognome || '';
   document.getElementById('email').value = c.email || '';
+  
   const prefs = c.preferenze || [];
-  const categoriaPreferita = prefs.length > 0 ? prefs[0] : '';
-  const select = document.getElementById('categoriaPreferita');
-  select.innerHTML = '<option value="">-- Seleziona Categoria --</option>';
-  allCategorie.forEach(cat => {
-    const o = document.createElement('option');
-    o.value = cat;
-    o.textContent = cat;
-    if (cat === categoriaPreferita) o.selected = true;
-    select.appendChild(o);
-  });
+  if(prefs.length > 0) document.getElementById('categoriaPreferita').value = prefs[0];
+
+  // Carica Storico Ordini
+  const ordRes = await fetch(`http://localhost:3000/cliente/${id}/ordini`);
+  const ordini = await ordRes.json();
+  const ordiniContainer = document.getElementById('storicoOrdini');
+  ordiniContainer.innerHTML = '';
+
+  if(ordini.length === 0) {
+      ordiniContainer.innerHTML = '<div class="p-3 text-muted">Nessun ordine effettuato.</div>';
+  } else {
+      ordini.forEach(o => {
+          const data = new Date(o.dataCreazione).toLocaleDateString();
+          const statusColor = o.stato === 'consegnato' ? 'success' : (o.stato === 'ordinato' ? 'warning' : 'primary');
+          const statusText = o.stato.toUpperCase().replace('_', ' ');
+          
+          const item = document.createElement('div');
+          item.className = 'list-group-item';
+          item.innerHTML = `
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1">${o.ristoranteInfo?.nomeRistorante || 'Ristorante'}</h6>
+              <small class="text-muted">${data}</small>
+            </div>
+            <p class="mb-1">Totale: <strong>€${o.totale.toFixed(2)}</strong></p>
+            <small>
+                <span class="badge bg-${statusColor}">${statusText}</span> 
+                ${o.tipoConsegna === 'domicilio' ? '🛵 A Domicilio' : '🛍️ Asporto'}
+            </small>
+          `;
+          ordiniContainer.appendChild(item);
+      });
+  }
 }
 
 async function aggiorna() {
   const nome = document.getElementById('nome').value;
   const cognome = document.getElementById('cognome').value;
-  const categoriaPreferita = document.getElementById('categoriaPreferita').value;
-  const preferenze = categoriaPreferita ? [categoriaPreferita] : [];
+  const cat = document.getElementById('categoriaPreferita').value;
+  const preferenze = cat ? [cat] : [];
   const res = await fetch(`http://localhost:3000/cliente/${id}`, {
     method:'PUT',
     headers:{'Content-Type':'application/json'}, 
     body: JSON.stringify({ nome, cognome, preferenze })});
-  if(res.ok){ 
-    alert('Aggiornato'); 
-    location.href='cliente.html'; 
-  } else alert('Errore aggiornamento');
+  if(res.ok){ alert('Profilo Aggiornato'); } else alert('Errore aggiornamento');
 }
 
 async function elimina() {
@@ -135,7 +155,7 @@ async function elimina() {
   } else alert('Errore eliminazione');
 }
 
-load();
+loadData();
 </script>
 </body>
 </html>
