@@ -1,8 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
-const axios = require('axios'); // Serve per OpenStreetMap
+const axios = require('axios');
 
+// Configurazione Server
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -14,7 +15,7 @@ const port = 3000;
 
 const client = new MongoClient(mongoURL);
 
-// Funzione helper per convertire stringhe in ObjectId
+// Funzione helper per ObjectId
 function toObjectId(id) {
     try {
         return new ObjectId(id);
@@ -27,7 +28,7 @@ function toObjectId(id) {
 async function startServer() {
     try {
         await client.connect();
-        console.log("Connesso a MongoDB");
+        console.log("Connesso al database MongoDB");
         app.listen(port, () => {
             console.log(`Server attivo su http://localhost:${port}`);
         });
@@ -38,19 +39,15 @@ async function startServer() {
 startServer();
 
 // ---------------------------------------------------------
-// 1. UTILITY & GEOCODING
+// 1. UTILITY E GEOCODING
 // ---------------------------------------------------------
 
-// Calcola le coordinate da un indirizzo (Usato dal frontend per il cliente)
 app.post('/utils/geocode', async (req, res) => {
     const { indirizzo } = req.body;
     if (!indirizzo) return res.status(400).json({ message: "Indirizzo mancante" });
 
     try {
-        // Chiamata a Nominatim (OpenStreetMap)
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(indirizzo)}`;
-        
-        // Header necessario per evitare blocchi da OSM
         const response = await axios.get(url, {
             headers: { 'User-Agent': 'FastFoodProject/1.0' }
         });
@@ -70,10 +67,9 @@ app.post('/utils/geocode', async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 2. MENU E CATALOGHI
+// 2. MENU E CATALOGO
 // ---------------------------------------------------------
 
-// Restituisce i piatti ATTIVI (quelli venduti da un ristorante)
 app.get('/meals', async (req, res) => {
     try {
         const meals = await client.db(dbName).collection('piatti').find({
@@ -85,7 +81,6 @@ app.get('/meals', async (req, res) => {
     }
 });
 
-// Catalogo base per l'importazione (piatti non in vendita)
 app.get('/catalog', async (req, res) => {
     try {
         const catalog = await client.db(dbName).collection('catalog').find({}).toArray();
@@ -97,9 +92,8 @@ app.get('/catalog', async (req, res) => {
 
 app.get('/categorie-catalogo', async (req, res) => {
     try {
-        // Prende le categorie distinte dal catalogo base
         const categorie = await client.db(dbName).collection('catalog').distinct('strCategory');
-        res.json(categorie.filter(c => c)); // Rimuove eventuali null
+        res.json(categorie.filter(c => c));
     } catch (e) {
         res.status(500).json([]);
     }
@@ -146,7 +140,6 @@ app.get('/cliente/:id', async (req, res) => {
     }
 });
 
-// Storico ordini cliente
 app.get('/cliente/:id/ordini', async (req, res) => {
     try {
         const ordini = await client.db(dbName).collection('ordini').aggregate([
@@ -203,7 +196,6 @@ app.post('/ristoratore', async (req, res) => {
             return res.status(400).json({ message: 'Email già usata' });
         }
 
-        // Cerchiamo le coordinate automaticamente all'iscrizione
         let lat = null, lon = null;
         try {
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(indirizzo)}`;
@@ -223,7 +215,6 @@ app.post('/ristoratore', async (req, res) => {
         
         const result = await db.collection('ristoratori').insertOne(nuovo);
         
-        // Se aveva piatti nel form di registrazione, li aggiungiamo
         if (piatti && piatti.length > 0) {
             const piattiGlobali = piatti.map(p => ({
                 ...p,
@@ -234,7 +225,6 @@ app.post('/ristoratore', async (req, res) => {
             }));
             await db.collection('piatti').insertMany(piattiGlobali);
             
-            // Aggiorniamo anche l'array interno del ristoratore
             await db.collection('ristoratori').updateOne(
                 { _id: result.insertedId },
                 { $set: { piatti: piattiGlobali } }
@@ -268,7 +258,6 @@ app.get('/ristoratore/:id', async (req, res) => {
     }
 });
 
-// Gestione Piatti Ristoratore
 app.get('/ristoratore/:id/piatti', async (req, res) => {
     try {
         const piatti = await client.db(dbName).collection('piatti')
@@ -296,10 +285,8 @@ app.post('/ristoratore/:id/piatti', async (req, res) => {
             createdAt: new Date()
         };
 
-        // Salva nella collection globale
         const resPiatto = await db.collection('piatti').insertOne(nuovoPiatto);
         
-        // Aggiorna il documento del ristoratore
         await db.collection('ristoratori').updateOne(
             { _id: id },
             { $push: { piatti: { ...piatto, id: resPiatto.insertedId } } }
@@ -311,7 +298,6 @@ app.post('/ristoratore/:id/piatti', async (req, res) => {
     }
 });
 
-// Statistiche Ristoratore
 app.get('/ristoratore/:id/statistiche', async (req, res) => {
     try {
         const id = toObjectId(req.params.id);
@@ -366,7 +352,7 @@ app.post('/ordine', async (req, res) => {
             piatti, 
             totale: parseFloat(totale), 
             costoConsegna: parseFloat(costoConsegna || 0),
-            stato: 'ordinato', // Stati: ordinato, in_preparazione, in_consegna, consegnato
+            stato: 'ordinato',
             tipoConsegna, 
             indirizzoConsegna, 
             dataCreazione: new Date()
