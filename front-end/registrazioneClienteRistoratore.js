@@ -1,239 +1,202 @@
-let userType = 'cliente';
-let mealsData = [];
-let categorie = [];
-const selectedMeals = new Map();
+// Variabili globali
+let tipoUtente = 'cliente'; // Default
+let catalogoCompleto = [];  // Tutti i piatti dal DB
+let menuRistoratore = [];   // I piatti scelti dal ristoratore
 
-function setType(type) {
-  userType = type;
-  document.getElementById('tabCliente').classList.toggle('tab-active', type==='cliente');
-  document.getElementById('tabRistoratore').classList.toggle('tab-active', type==='ristoratore');
-  document.getElementById('clienteFields').style.display = type==='cliente' ? 'block' : 'none';
-  document.getElementById('ristoratoreFields').style.display = type==='ristoratore' ? 'block' : 'none';
-}
+// 1. Al caricamento della pagina
+window.onload = async function() {
+    console.log("Pagina caricata. Scarico i dati...");
+    
+    try {
+        // Scarico Categorie
+        const resCat = await fetch('http://localhost:3000/categorie-catalogo');
+        const categorie = await resCat.json();
+        
+        // Riempio le tendine
+        const selCliente = document.getElementById('prefCliente');
+        const selFiltro = document.getElementById('filtroCatalogo');
+        
+        selCliente.innerHTML = '<option value="">-- Seleziona --</option>';
+        selFiltro.innerHTML = '<option value="">-- Seleziona --</option>';
 
-async function loadCategorie() {
-  try {
-    const res = await fetch('http://localhost:3000/categorie');
-    categorie = await res.json();
-    
-    const catSelectCliente = document.getElementById('categoriaCliente');
-    catSelectCliente.innerHTML = '<option value="">-- Seleziona Categoria --</option>';
-    categorie.forEach(cat => {
-      const o = document.createElement('option');
-      o.value = cat;
-      o.textContent = cat;
-      catSelectCliente.appendChild(o);
-    });
-    
-    const catSelectRistoratore = document.getElementById('categoriaRistoratore');
-    catSelectRistoratore.innerHTML = '<option value="">-- Seleziona Categoria --</option>';
-    categorie.forEach(cat => {
-      const o = document.createElement('option');
-      o.value = cat;
-      o.textContent = cat;
-      catSelectRistoratore.appendChild(o);
-    });
-  } catch (err) {
-    console.error('Errore caricamento categorie:', err);
-    alert('Errore nel caricamento delle categorie');
-  }
-}
-
-async function loadMeals() {
-  try {
-    const res = await fetch('http://localhost:3000/meals');
-    mealsData = await res.json();
-  } catch (err) {
-    console.error('Errore caricamento meals:', err);
-    alert('Errore nel caricamento dei piatti');
-  }
-}
-
-document.getElementById('categoriaRistoratore').addEventListener('change', function() {
-  const cat = this.value;
-  const container = document.getElementById('piattiContainer');
-  container.innerHTML = '';
-  if (!cat) return;
-  
-  const list = mealsData.filter(m => m.strCategory === cat);
-  list.forEach(m => {
-    const selected = selectedMeals.get(m._id);
-    
-    const card = document.createElement('div');
-    card.className = 'col-md-3 mb-3';
-    card.innerHTML = `
-      <div class="card h-100">
-        <img src="${m.strMealThumb || ''}" style="height:120px;object-fit:cover" class="card-img-top">
-        <div class="card-body">
-          <h6 class="card-title">${m.strMeal}</h6>
-          <div class="mb-2">
-            <label class="form-label small">Prezzo (€)*</label>
-            <input type="number" class="form-control form-control-sm prezzo" 
-                   value="${selected ? selected.prezzo : ''}" 
-                   step="0.01" min="0" placeholder="0.00" required>
-          </div>
-          <div class="mb-2">
-            <label class="form-label small">Tempo prep. (min)*</label>
-            <input type="number" class="form-control form-control-sm tempo" 
-                   value="${selected ? selected.tempo : ''}" 
-                   min="1" placeholder="30" required>
-          </div>
-          <button type="button" class="btn btn-sm ${selected ? 'btn-danger' : 'btn-success'} w-100 btn-aggiungi">
-            ${selected ? 'Rimuovi' : 'Aggiungi'}
-          </button>
-        </div>
-      </div>
-    `;
-    container.appendChild(card);
-    
-    const btn = card.querySelector('.btn-aggiungi');
-    const prezzoInput = card.querySelector('.prezzo');
-    const tempoInput = card.querySelector('.tempo');
-    
-    btn.addEventListener('click', () => {
-      const prezzo = parseFloat(prezzoInput.value);
-      const tempo = parseInt(tempoInput.value);
-      
-      if (!prezzo || !tempo) {
-        alert('Inserisci prezzo e tempo di preparazione');
-        return;
-      }
-      
-      if (selectedMeals.has(m._id)) {
-        selectedMeals.delete(m._id);
-        btn.classList.remove('btn-danger');
-        btn.classList.add('btn-success');
-        btn.textContent = 'Aggiungi';
-      } else {
-        selectedMeals.set(m._id, {
-          id: m._id,
-          nome: m.strMeal,
-          thumb: m.strMealThumb,
-          prezzo: prezzo,
-          tempo: tempo,
-          categoria: m.strCategory,
-          ingredienti: m.strIngredient1 || '',
-          allergeni: m.strAllergeni || ''
+        categorie.forEach(cat => {
+            // Per il cliente
+            selCliente.innerHTML += `<option value="${cat}">${cat}</option>`;
+            // Per il filtro ristoratore
+            selFiltro.innerHTML += `<option value="${cat}">${cat}</option>`;
         });
-        btn.classList.remove('btn-success');
-        btn.classList.add('btn-danger');
-        btn.textContent = 'Rimuovi';
-      }
-      aggiornaMenuSelezionato();
-    });
-  });
-});
 
-function aggiornaMenuSelezionato() {
-  const container = document.getElementById('menuSelezionato');
-  container.innerHTML = '';
-  
-  if (selectedMeals.size === 0) {
-    container.innerHTML = '<p class="text-muted">Nessun piatto selezionato</p>';
-    return;
-  }
-  
-  selectedMeals.forEach((meal, id) => {
-    const card = document.createElement('div');
-    card.className = 'col-md-4 mb-2';
-    card.innerHTML = `
-      <div class="card">
-        <img src="${meal.thumb}" style="height:80px;object-fit:cover" class="card-img-top">
-        <div class="card-body p-2">
-          <h6 class="card-title">${meal.nome}</h6>
-          <p class="card-text small mb-1">€${meal.prezzo} - ${meal.tempo}min</p>
-          <p class="card-text small text-muted">${meal.categoria}</p>
-        </div>
-      </div>
-    `;
-    container.appendChild(card);
-  });
+        // Scarico il Catalogo Piatti (per il ristoratore)
+        const resMeals = await fetch('http://localhost:3000/catalog');
+        catalogoCompleto = await resMeals.json();
+        console.log(`Catalogo scaricato: ${catalogoCompleto.length} piatti.`);
+
+    } catch (e) {
+        console.error("Errore caricamento:", e);
+        alert("Errore di connessione al server. Assicurati che 'node index.js' sia attivo.");
+    }
+};
+
+// 2. Gestione cambio Tab (Cliente <-> Ristoratore)
+function cambiaTab(tipo) {
+    tipoUtente = tipo;
+    
+    // Gestione stile bottoni
+    document.getElementById('btnTabCliente').className = tipo === 'cliente' ? 'tab-btn active-tab' : 'tab-btn';
+    document.getElementById('btnTabRistoratore').className = tipo === 'ristoratore' ? 'tab-btn active-tab' : 'tab-btn';
+
+    // Gestione visibilità campi
+    document.getElementById('divCliente').style.display = tipo === 'cliente' ? 'block' : 'none';
+    document.getElementById('divRistoratore').style.display = tipo === 'ristoratore' ? 'block' : 'none';
 }
 
-async function Registrati() {
-  console.log('Funzione Registrati chiamata');
-  
-  const email = (document.getElementById('email').value || '').trim();
-  const password = (document.getElementById('password').value || '');
-  const conferma = (document.getElementById('confermaPassword').value || '');
-  
-  if (!email || !password) { 
-    alert('Inserisci email e password'); 
-    return; 
-  }
-  if (password !== conferma) { 
-    alert('Le password non coincidono'); 
-    return; 
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { 
-    alert('Email non valida'); 
-    return; 
-  }
-  if (password.length < 4) { 
-    alert('Password troppo corta'); 
-    return; 
-  }
+// 3. Quando il ristoratore cambia categoria nel filtro
+document.getElementById('filtroCatalogo').addEventListener('change', function() {
+    const categoriaScelta = this.value;
+    const div = document.getElementById('containerPiatti');
+    div.innerHTML = ""; // Pulisco
 
-  let payload = { email, password };
+    if (!categoriaScelta) return;
 
-  if (userType === 'cliente') {
-    const nome = (document.getElementById('nome').value || '').trim();
-    const cognome = (document.getElementById('cognome').value || '').trim();
-    const categoriaPreferita = document.getElementById('categoriaCliente').value;
-    const preferenze = categoriaPreferita ? [categoriaPreferita] : [];
+    // Filtro i piatti dal catalogo in memoria
+    const piattiFiltrati = catalogoCompleto.filter(p => p.strCategory === categoriaScelta);
 
-    if (!nome || !cognome || !categoriaPreferita) {
-      alert('Compila tutti i campi obbligatori');
-      return;
+    if (piattiFiltrati.length === 0) {
+        div.innerHTML = "<p class='text-center text-muted'>Nessun piatto trovato.</p>";
+        return;
     }
 
-    payload = { ...payload, nome, cognome, preferenze };
-  } else {
-    const nomeRistorante = (document.getElementById('nomeRistorante').value || '').trim();
-    const piva = (document.getElementById('piva').value || '').trim();
-    const telefono = (document.getElementById('telefono').value || '').trim();
-    const indirizzo = (document.getElementById('indirizzo').value || '').trim();
-
-    const piatti = Array.from(selectedMeals.values());
-
-    if (!nomeRistorante || !piva || !telefono || !indirizzo) {
-      alert('Compila tutti i campi obbligatori');
-      return;
-    }
-
-    if (piatti.length === 0) {
-      alert('Seleziona almeno un piatto per il tuo menu');
-      return;
-    }
-
-    payload = { ...payload, nomeRistorante, piva, telefono, indirizzo, piatti };
-  }
-
-  const endpoint = userType === 'cliente' ? '/cliente' : '/ristoratore';
-  try {
-    console.log('Invio richiesta a:', endpoint);
-    const res = await fetch(`http://localhost:3000${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    // Disegno le card
+    piattiFiltrati.forEach((p, index) => {
+        // Controllo se è già stato aggiunto
+        const giaAggiunto = menuRistoratore.some(m => m.nome === p.strMeal);
+        
+        div.innerHTML += `
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <img src="${p.strMealThumb}" class="card-img-top">
+                    <div class="card-body p-2">
+                        <h6 class="text-truncate" title="${p.strMeal}">${p.strMeal}</h6>
+                        
+                        <input type="number" id="prezzo_${index}" class="form-control form-control-sm mb-1" placeholder="Prezzo €" min="0" step="0.50" ${giaAggiunto ? 'disabled' : ''}>
+                        <input type="number" id="tempo_${index}" class="form-control form-control-sm mb-1" placeholder="Minuti" min="1" ${giaAggiunto ? 'disabled' : ''}>
+                        
+                        <button onclick='aggiungiAlMenu(${index}, "${p.strMeal}", "${p.strCategory}", "${p.strMealThumb}")' 
+                                class="btn btn-sm w-100 ${giaAggiunto ? 'btn-secondary' : 'btn-success'}" 
+                                id="btn_${index}"
+                                ${giaAggiunto ? 'disabled' : ''}>
+                            ${giaAggiunto ? 'Già aggiunto' : 'Aggiungi'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
     });
-    
-    const json = await res.json();
-    console.log('Risposta server:', json);
-    
-    if (res.ok && json._id) {
-      alert('Registrazione completata! Effettua il login.');
-      window.location.href = 'login.html';
-    } else {
-      alert('Errore registrazione: ' + (json.message || 'Errore sconosciuto'));
+});
+
+// 4. Aggiungi un piatto alla lista temporanea del ristoratore
+function aggiungiAlMenu(index, nome, cat, img) {
+    const prezzo = document.getElementById(`prezzo_${index}`).value;
+    const tempo = document.getElementById(`tempo_${index}`).value;
+
+    if (!prezzo || !tempo) {
+        alert("Inserisci Prezzo e Tempo di preparazione!");
+        return;
     }
-  } catch (err) {
-    console.error('Errore fetch:', err);
-    alert('Errore di connessione al server: ' + err.message);
-  }
+
+    // Aggiungo all'array globale
+    menuRistoratore.push({
+        nome: nome,
+        categoria: cat,
+        thumb: img,
+        prezzo: parseFloat(prezzo),
+        tempo: parseInt(tempo),
+        ingredienti: "Ingredienti standard" // Semplificazione, potresti prenderli dal catalogo
+    });
+
+    // Aggiorno UI
+    document.getElementById(`btn_${index}`).className = 'btn btn-sm w-100 btn-secondary';
+    document.getElementById(`btn_${index}`).innerText = 'Aggiunto';
+    document.getElementById(`btn_${index}`).disabled = true;
+    document.getElementById(`prezzo_${index}`).disabled = true;
+    document.getElementById(`tempo_${index}`).disabled = true;
+
+    aggiornaRiepilogo();
 }
 
-Promise.all([loadCategorie(), loadMeals()]).catch(err => {
-  console.error('Errore inizializzazione:', err);
-  alert('Errore nel caricamento dei dati iniziali');
-});
+function aggiornaRiepilogo() {
+    const div = document.getElementById('menuScelto');
+    if (menuRistoratore.length === 0) {
+        div.innerHTML = '<small class="text-muted">Nessun piatto aggiunto.</small>';
+        return;
+    }
+    
+    let html = '';
+    menuRistoratore.forEach(p => {
+        html += `<span class="badge bg-primary me-1 mb-1">${p.nome} (€${p.prezzo})</span>`;
+    });
+    div.innerHTML = html;
+}
+
+// 5. FUNZIONE PRINCIPALE DI REGISTRAZIONE
+async function registrati() {
+    // Dati comuni
+    const email = document.getElementById('email').value;
+    const pass = document.getElementById('pass').value;
+    const conf = document.getElementById('confPass').value;
+
+    if (!email || !pass) { alert("Email e Password obbligatorie"); return; }
+    if (pass !== conf) { alert("Le password non coincidono"); return; }
+
+    let payload = { email: email, password: pass };
+    let urlDestinazione = '';
+
+    if (tipoUtente === 'cliente') {
+        urlDestinazione = 'http://localhost:3000/cliente';
+        const nome = document.getElementById('nome').value;
+        const pref = document.getElementById('prefCliente').value;
+        
+        if(!nome) { alert("Inserisci il nome"); return; }
+        
+        payload.nome = nome;
+        payload.cognome = document.getElementById('cognome').value;
+        payload.preferenze = [pref]; // Il server si aspetta un array
+    } 
+    else {
+        urlDestinazione = 'http://localhost:3000/ristoratore';
+        const nomeRist = document.getElementById('nomeRist').value;
+        const indirizzo = document.getElementById('indirizzo').value;
+        const piva = document.getElementById('piva').value;
+        const telefono = document.getElementById('telefono').value;
+
+        if(!nomeRist || !indirizzo || !piva) { alert("Compila tutti i dati del ristorante"); return; }
+        if(menuRistoratore.length === 0) { alert("Devi aggiungere almeno un piatto al menu!"); return; }
+
+        payload.nomeRistorante = nomeRist;
+        payload.indirizzo = indirizzo;
+        payload.piva = piva;
+        payload.telefono = telefono;
+        payload.piatti = menuRistoratore;
+    }
+
+    // Invio al server
+    try {
+        const res = await fetch(urlDestinazione, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert("Registrazione avvenuta con successo! Ora puoi accedere.");
+            window.location.href = 'login.html';
+        } else {
+            alert("Errore: " + (data.message || "Impossibile registrare"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Errore di connessione al server.");
+    }
+}

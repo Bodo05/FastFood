@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestione Ordini - Ristoratore</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .status-badge {
+            font-size: 0.85em;
+            padding: 5px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .st-ordinato { background-color: #ffc107; color: #000; } /* Giallo */
+        .st-in_preparazione { background-color: #0d6efd; color: #fff; } /* Blu */
+        .st-in_consegna { background-color: #17a2b8; color: #fff; } /* Azzurro */
+        .st-consegnato { background-color: #198754; color: #fff; } /* Verde */
+    </style>
+</head>
+<body class="bg-light">
+
+    <div id="navbar-placeholder"></div>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📋 Ordini in Arrivo</h2>
+            <button class="btn btn-outline-primary" onclick="caricaOrdini()">🔄 Aggiorna</button>
+        </div>
+
+        <div id="containerOrdini" class="row g-4">
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p>Caricamento ordini...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="navbar.js"></script>
+
+    <script>
+        const rId = localStorage.getItem('_id');
+        
+        // Controllo accesso
+        if(!rId || localStorage.getItem('userType') !== 'ristoratore') { 
+            window.location.href = 'login.html'; 
+        }
+
+        // Carica ordini all'avvio
+        window.onload = () => {
+            caricaOrdini();
+            // Aggiorna automaticamente ogni 10 secondi
+            setInterval(caricaOrdini, 10000); 
+        };
+
+        async function caricaOrdini() {
+            try {
+                const res = await fetch(`http://localhost:3000/ristoratore/${rId}/ordini`);
+                if(!res.ok) throw new Error("Errore server");
+                
+                const ordini = await res.json();
+                renderOrdini(ordini);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('containerOrdini').innerHTML = 
+                    '<div class="alert alert-danger">Impossibile caricare gli ordini. Controlla il server.</div>';
+            }
+        }
+
+        function renderOrdini(ordini) {
+            const container = document.getElementById('containerOrdini');
+            container.innerHTML = '';
+
+            if (ordini.length === 0) {
+                container.innerHTML = '<div class="col-12"><div class="alert alert-info text-center">Nessun ordine da gestire al momento.</div></div>';
+                return;
+            }
+
+            ordini.forEach(ordine => {
+                const card = creaCardOrdine(ordine);
+                container.appendChild(card);
+            });
+        }
+
+        function creaCardOrdine(ordine) {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-lg-4';
+
+            const clienteNome = ordine.clienteInfo?.nome || 'Cliente Sconosciuto';
+            const dataOra = new Date(ordine.dataCreazione).toLocaleString('it-IT', { hour: '2-digit', minute:'2-digit' });
+            const tipoConsegna = ordine.tipoConsegna === 'domicilio' ? '🛵 Domicilio' : '🛍️ Asporto';
+            const indirizzo = ordine.indirizzoConsegna || 'Ritiro in sede';
+            
+            // Genera lista piatti
+            let htmlPiatti = '<ul class="list-group list-group-flush mb-3">';
+            ordine.piatti.forEach(p => {
+                htmlPiatti += `<li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                    ${p.strMeal || p.nome} 
+                    <span class="badge bg-secondary rounded-pill">x${p.quantita}</span>
+                </li>`;
+            });
+            htmlPiatti += '</ul>';
+
+            // Gestione Stato e Bottoni
+            let badgeClass = `st-${ordine.stato}`;
+            let badgeText = ordine.stato.replace('_', ' ').toUpperCase();
+            let actionButton = '';
+
+            if (ordine.stato === 'ordinato') {
+                actionButton = `<button class="btn btn-primary w-100" onclick="cambiaStato('${ordine._id}', 'in_preparazione')">👨‍🍳 Inizia a Cucinare</button>`;
+            } else if (ordine.stato === 'in_preparazione') {
+                actionButton = `<button class="btn btn-info w-100 text-white" onclick="cambiaStato('${ordine._id}', 'in_consegna')">📦 Pronto per Consegna</button>`;
+            } else if (ordine.stato === 'in_consegna') {
+                actionButton = `<button class="btn btn-success w-100" onclick="cambiaStato('${ordine._id}', 'consegnato')">✅ Segna come Consegnato</button>`;
+            } else {
+                actionButton = `<button class="btn btn-secondary w-100" disabled>Archiviato</button>`;
+            }
+
+            col.innerHTML = `
+                <div class="card shadow-sm h-100 border-0">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                        <span class="fw-bold">#${ordine._id.slice(-4)}</span>
+                        <span class="status-badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title mb-1">${clienteNome}</h5>
+                        <p class="text-muted small mb-3">Ordinato alle ${dataOra}</p>
+                        
+                        <div class="alert alert-light border mb-3">
+                            <strong>${tipoConsegna}</strong><br>
+                            <small class="text-muted">📍 ${indirizzo}</small>
+                        </div>
+
+                        ${htmlPiatti}
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 border-top pt-2">
+                            <span>Totale Incasso:</span>
+                            <span class="h4 text-success mb-0">€${ordine.totale.toFixed(2)}</span>
+                        </div>
+
+                        ${actionButton}
+                    </div>
+                </div>
+            `;
+
+            return col;
+        }
+
+        async function cambiaStato(idOrdine, nuovoStato) {
+            if(!confirm(`Vuoi cambiare lo stato dell'ordine in "${nuovoStato.replace('_', ' ')}"?`)) return;
+
+            try {
+                const res = await fetch(`http://localhost:3000/ordine/${idOrdine}/stato`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nuovoStato })
+                });
+
+                if(res.ok) {
+                    caricaOrdini(); // Ricarica la lista per vedere le modifiche
+                } else {
+                    alert("Errore nell'aggiornamento dello stato.");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Errore di connessione.");
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,130 +1,127 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Registrazione</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-.tab-button {
-    padding: 10px 20px;
-    cursor: pointer;
-    border: none;
-    background: none;
-    border-bottom: 3px solid transparent;
-}
-.tab-active {
-    border-bottom: 3px solid #0d6efd;
-    font-weight: bold;
-}
-.card {
-    transition: transform 0.2s;
-}
-.card:hover {
-    transform: translateY(-2px);
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Registrazione - FastFood</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .tab-btn { cursor: pointer; padding: 10px; border-bottom: 2px solid transparent; width: 50%; text-align: center; }
+        .active-tab { border-bottom: 2px solid #0d6efd; font-weight: bold; color: #0d6efd; }
+        .card-img-top { height: 120px; object-fit: cover; }
+    </style>
 </head>
 <body class="bg-light">
-<div class="container py-4">
-  <div class="row justify-content-center">
-    <div class="col-12 col-md-10 col-lg-8">
-      <div class="card shadow">
-        <div class="card-body p-4">
-          <h3 class="text-primary text-center mb-4">FAST FOOD - Registrazione</h3>
 
-          <div class="d-flex justify-content-around mb-4 border-bottom">
-            <div id="tabCliente" class="tab-button tab-active" onclick="setType('cliente')">Cliente</div>
-            <div id="tabRistoratore" class="tab-button" onclick="setType('ristoratore')">Ristoratore</div>
-          </div>
-
-          <form id="registerForm" onsubmit="event.preventDefault(); Registrati();">
-
-            <div id="clienteFields">
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label class="form-label">Nome *</label>
-                  <input id="nome" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Cognome *</label>
-                  <input id="cognome" class="form-control" required>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Categoria Preferita *</label>
-                <select id="categoriaCliente" class="form-select" required>
-                  <option value="">-- Seleziona Categoria --</option>
-                </select>
-              </div>
-            </div>
-
-            <div id="ristoratoreFields" style="display:none;">
-              <div class="mb-3">
-                <label class="form-label">Nome Ristorante *</label>
-                <input id="nomeRistorante" class="form-control" required>
-              </div>
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label class="form-label">Partita IVA *</label>
-                  <input id="piva" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Telefono *</label>
-                  <input id="telefono" class="form-control" required>
-                </div>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Indirizzo *</label>
-                <input id="indirizzo" class="form-control" required>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Seleziona Categoria per Scegliere Piatti</label>
-                <select id="categoriaRistoratore" class="form-select">
-                  <option value="">-- Seleziona Categoria --</option>
-                </select>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Piatti Disponibili</label>
-                <div id="piattiContainer" class="row g-3 border rounded p-3 bg-light"></div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Menu Selezionato</label>
-                <div id="menuSelezionato" class="row g-2 border rounded p-3 bg-light"></div>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Email *</label>
-              <input id="email" type="email" class="form-control" required>
-            </div>
-            <div class="row mb-4">
-              <div class="col-md-6">
-                <label class="form-label">Password *</label>
-                <input id="password" type="password" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Conferma Password *</label>
-                <input id="confermaPassword" type="password" class="form-control" required>
-              </div>
-            </div>
-
-            <div class="d-grid">
-              <button class="btn btn-primary btn-lg" type="submit">Registrati</button>
-            </div>
-            <div class="text-center mt-3">
-              <a href="login.html" class="text-decoration-none">Hai già un account? Accedi</a>
-            </div>
-          </form>
-
-        </div>
-      </div>
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">FastFood</a>
+        <a href="login.html" class="btn btn-outline-light btn-sm">Accedi</a>
     </div>
-  </div>
+</nav>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h3 class="text-center mb-4">Crea un Account</h3>
+
+                    <div class="d-flex mb-4">
+                        <div id="btnTabCliente" class="tab-btn active-tab" onclick="cambiaTab('cliente')">Sono un Cliente</div>
+                        <div id="btnTabRistoratore" class="tab-btn" onclick="cambiaTab('ristoratore')">Sono un Ristoratore</div>
+                    </div>
+
+                    <form id="formRegistrazione">
+                        
+                        <div class="mb-3">
+                            <label>Email:</label>
+                            <input type="email" id="email" class="form-control" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label>Password:</label>
+                                <input type="password" id="pass" class="form-control" required>
+                            </div>
+                            <div class="col-6">
+                                <label>Conferma:</label>
+                                <input type="password" id="confPass" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div id="divCliente">
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label>Nome:</label>
+                                    <input type="text" id="nome" class="form-control">
+                                </div>
+                                <div class="col-6">
+                                    <label>Cognome:</label>
+                                    <input type="text" id="cognome" class="form-control">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label>Cosa ti piace mangiare?</label>
+                                <select id="prefCliente" class="form-select">
+                                    <option value="">-- Caricamento... --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="divRistoratore" style="display: none;">
+                            <div class="mb-3">
+                                <label>Nome Ristorante:</label>
+                                <input type="text" id="nomeRist" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label>Indirizzo Completo (Via, Città):</label>
+                                <input type="text" id="indirizzo" class="form-control" placeholder="Es. Via Roma 1, Milano">
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label>Partita IVA:</label>
+                                    <input type="text" id="piva" class="form-control">
+                                </div>
+                                <div class="col-6">
+                                    <label>Telefono:</label>
+                                    <input type="text" id="telefono" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <strong>Crea il tuo Menu:</strong> Scegli una categoria, trova i piatti e aggiungili.
+                            </div>
+
+                            <div class="mb-3">
+                                <label>Filtra Catalogo per Categoria:</label>
+                                <select id="filtroCatalogo" class="form-select">
+                                    <option value="">-- Seleziona --</option>
+                                </select>
+                            </div>
+
+                            <div id="containerPiatti" class="row g-3 mb-3 border p-2 bg-white rounded" style="max-height: 400px; overflow-y: auto;">
+                                <p class="text-muted text-center mt-3">Seleziona una categoria per vedere i piatti.</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="fw-bold text-success">Piatti aggiunti al tuo menu:</label>
+                                <div id="menuScelto" class="p-2 border rounded bg-light">
+                                    <small class="text-muted">Nessun piatto aggiunto.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="button" class="btn btn-primary btn-lg" onclick="registrati()">Conferma Registrazione</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="registrazioneClienteRistoratore.js"></script>

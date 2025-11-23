@@ -95,15 +95,13 @@ app.get('/catalog', async (req, res) => {
     }
 });
 
-// Lista categorie disponibili
-app.get('/categorie', async (req, res) => {
+app.get('/categorie-catalogo', async (req, res) => {
     try {
-        const categorie = await client.db(dbName).collection('piatti').distinct('categoria', {
-            ristoranteId: { $exists: true, $ne: null }
-        });
-        res.json(categorie.filter(Boolean));
-    } catch (err) {
-        res.status(500).json({ message: 'Errore server' });
+        // Prende le categorie distinte dal catalogo base
+        const categorie = await client.db(dbName).collection('catalog').distinct('strCategory');
+        res.json(categorie.filter(c => c)); // Rimuove eventuali null
+    } catch (e) {
+        res.status(500).json([]);
     }
 });
 
