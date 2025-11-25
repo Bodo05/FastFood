@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
         links = `
             <li class="nav-item"><a class="nav-link" href="cliente.html">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="ricerca.html">Ricerca</a></li>
-            <li class="nav-item"><a class="nav-link" href="ricercaAvanzata.html">Ricerca Avanzata</a></li>
             <li class="nav-item"><a class="nav-link" href="carrello.html">Carrello</a></li>
             <li class="nav-item"><a class="nav-link" href="gestioneCliente.html">Profilo</a></li>
         `;
@@ -42,11 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 ${links}
             </ul>
             <div class="d-flex align-items-center">
-                ${userType === 'cliente' ? `
-                <div class="input-group me-3" style="max-width: 250px;">
-                    <input type="text" id="navbarSearchInput" class="form-control form-control-sm" placeholder="Cerca...">
-                    <button class="btn btn-outline-light btn-sm" onclick="effettuaRicercaNavbar()">🔍</button>
-                </div>` : ''}
                 <button class="btn btn-outline-danger btn-sm" onclick="logout()">Esci</button>
             </div>
         </div>
@@ -62,10 +56,4 @@ document.addEventListener('DOMContentLoaded', function() {
 function logout() {
     localStorage.clear();
     window.location.href = 'login.html';
-}
-
-// Funzione di ricerca per la navbar (solo clienti)
-function effettuaRicercaNavbar() {
-    const q = document.getElementById('navbarSearchInput').value.trim();
-    if (q) window.location.href = `ricerca.html?q=${encodeURIComponent(q)}`;
 }

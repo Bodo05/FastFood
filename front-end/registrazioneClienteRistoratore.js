@@ -104,6 +104,26 @@ function aggiungiAlMenu(index, nome, cat, img) {
         return;
     }
 
+    // --- RECUPERO INGREDIENTI VERI DAL CATALOGO ---
+    const piattoOriginale = catalogoCompleto[index]; // catalogoCompleto è globale
+    let listaIngredienti = [];
+
+    // 1. Se il piatto nel JSON ha già un array "ingredients" (formato meals1.json)
+    if (piattoOriginale.ingredients && Array.isArray(piattoOriginale.ingredients)) {
+        listaIngredienti = piattoOriginale.ingredients;
+    } 
+    // 2. Se il piatto è nel formato TheMealDB (strIngredient1, strIngredient2...)
+    else {
+        for(let i=1; i<=20; i++) {
+            const ing = piattoOriginale[`strIngredient${i}`];
+            if(ing && ing.trim()) listaIngredienti.push(ing);
+        }
+    }
+    
+    // Unisci gli ingredienti in una stringa unica
+    const stringaIngredienti = listaIngredienti.join(', ');
+    // ----------------------------------------------
+
     // Aggiungo all'array globale
     menuRistoratore.push({
         nome: nome,
@@ -111,7 +131,7 @@ function aggiungiAlMenu(index, nome, cat, img) {
         thumb: img,
         prezzo: parseFloat(prezzo),
         tempo: parseInt(tempo),
-        ingredienti: "Ingredienti standard" // Semplificazione, potresti prenderli dal catalogo
+        ingredienti: stringaIngredienti || "Ingredienti non specificati" // Salva quelli veri!
     });
 
     // Aggiorno UI

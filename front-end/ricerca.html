@@ -5,139 +5,277 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ricerca - FastFood</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .dropdown-menu {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .search-result-item {
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .search-result-item:hover {
-            background-color: #f8f9fa;
-        }
-    </style>
 </head>
 <body class="bg-light">
+
     <div id="navbar-placeholder"></div>
 
-    <div class="container mt-4">
-        <h3 class="mb-4">Ricerca</h3>
+    <div class="container mt-5">
+        <div class="text-center mb-4">
+            <h2>Cosa vuoi mangiare oggi?</h2>
+            <p class="text-muted">Usa i filtri per trovare il piatto perfetto.</p>
+        </div>
 
-        <!-- RICERCA RAPIDA PER TIPOLOGIA -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Ricerca per Tipologia</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <!-- Ricerca Piatti per Nome -->
-                    <div class="col-md-6">
-                        <label class="form-label">Ricerca Piatti per Nome</label>
-                        <div class="input-group">
-                            <input type="text" id="ricercaPiattoNome" class="form-control" 
-                                   placeholder="Es. Pizza, Hamburger...">
-                            <button class="btn btn-primary" onclick="cercaPiattoPerNome()">Cerca</button>
-                        </div>
-                    </div>
+        <div class="card shadow-sm p-4 mb-5">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <select class="form-select" id="tipoRicerca" onchange="aggiornaPlaceholder()">
+                        <option value="generale" selected>Tutto (Generale)</option>
+                        <option value="ingrediente">Per Ingrediente</option>
+                        <option value="ristorante">Per Ristorante</option>
+                        <option value="luogo">Per Luogo (Città)</option>
+                        <option value="allergene">Escludi Allergene</option>
+                        <option value="piatto_ristorante">Ristorante per Piatto</option>
+                    </select>
+                </div>
 
-                    <!-- Ricerca Piatti per Categoria -->
-                    <div class="col-md-6">
-                        <label class="form-label">Ricerca Piatti per Categoria</label>
-                        <div class="input-group">
-                            <select id="ricercaPiattoCategoria" class="form-select">
-                                <option value="">Seleziona categoria...</option>
-                            </select>
-                            <button class="btn btn-primary" onclick="cercaPiattoPerCategoria()">Cerca</button>
-                        </div>
-                    </div>
+                <div class="col-md-7">
+                    <input type="text" class="form-control" id="inputRicerca" placeholder="Cerca piatti o categorie...">
+                </div>
 
-                    <!-- Ricerca Piatti per Prezzo -->
-                    <div class="col-md-6">
-                        <label class="form-label">Ricerca Piatti per Prezzo</label>
-                        <div class="row g-2">
-                            <div class="col">
-                                <input type="number" id="prezzoMinRicerca" class="form-control" 
-                                       placeholder="Min €" step="0.01" min="0">
-                            </div>
-                            <div class="col">
-                                <input type="number" id="prezzoMaxRicerca" class="form-control" 
-                                       placeholder="Max €" step="0.01" min="0">
-                            </div>
-                            <div class="col">
-                                <button class="btn btn-primary w-100" onclick="cercaPiattoPerPrezzo()">Cerca</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Ricerca Ristoranti per Nome -->
-                    <div class="col-md-6">
-                        <label class="form-label">Ricerca Ristoranti per Nome</label>
-                        <div class="input-group">
-                            <input type="text" id="ricercaRistoranteNome" class="form-control" 
-                                   placeholder="Es. Ristorante Roma...">
-                            <button class="btn btn-primary" onclick="cercaRistorantePerNome()">Cerca</button>
-                        </div>
-                    </div>
-
-                    <!-- Ricerca Ristoranti per Luogo -->
-                    <div class="col-md-6">
-                        <label class="form-label">Ricerca Ristoranti per Luogo</label>
-                        <div class="input-group">
-                            <input type="text" id="ricercaRistoranteLuogo" class="form-control" 
-                                   placeholder="Es. Milano, Roma...">
-                            <button class="btn btn-primary" onclick="cercaRistorantePerLuogo()">Cerca</button>
-                        </div>
-                    </div>
-
-                    <!-- Ricerca Ristorante per Piatto Specifico -->
-                    <div class="col-md-6">
-                        <label class="form-label">Ricerca Ristorante per Piatto (Obbligatoria)</label>
-                        <div class="input-group">
-                            <input type="text" id="ricercaRistorantePerPiatto" class="form-control" 
-                                   placeholder="Inserisci nome piatto...">
-                            <button class="btn btn-warning" onclick="cercaRistorantePerPiattoNavbar()">Cerca Ristoranti</button>
-                        </div>
-                    </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="eseguiRicerca()">Cerca</button>
                 </div>
             </div>
         </div>
 
-        <!-- RICERCA PER INGREDIENTI E ALLERGIE (Obbligatorie) -->
-        <div class="card mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">Ricerca per Ingredienti e Allergie (Obbligatorie)</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <!-- Ricerca per Ingredienti -->
-                    <div class="col-md-6">
-                        <label class="form-label">Ricerca Piatti per Ingredienti</label>
-                        <div class="input-group">
-                            <input type="text" id="ricercaPerIngrediente" class="form-control" 
-                                   placeholder="Es. pomodoro, mozzarella...">
-                            <button class="btn btn-info" onclick="cercaPerIngrediente()">Cerca</button>
-                        </div>
-                    </div>
-
-                    <!-- Ricerca per Allergie -->
-                    <div class="col-md-6">
-                        <label class="form-label">Ricerca Piatti Escludendo Allergeni</label>
-                        <div class="input-group">
-                            <input type="text" id="ricercaEscludiAllergene" class="form-control" 
-                                   placeholder="Es. glutine, lattosio, noci...">
-                            <button class="btn btn-info" onclick="cercaEscludiAllergene()">Cerca</button>
-                        </div>
-                    </div>
-                </div>
+        <div id="loading" class="text-center d-none">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+        
+        <div id="containerRisultati" class="row g-4">
+            <div class="col-12 text-center text-muted mt-5">
+                I risultati della tua ricerca appariranno qui.
             </div>
         </div>
-
-        <!-- RISULTATI DELLA RICERCA -->
-        <div id="risultatiRicerca" class="row"></div>
     </div>
+
     <script src="navbar.js"></script>
-    <script src="ricercaNavbar.js"></script>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            aggiornaPlaceholder();
+            checkUrlParams();
+        });
+
+        function aggiornaPlaceholder() {
+            const tipo = document.getElementById('tipoRicerca').value;
+            const input = document.getElementById('inputRicerca');
+            const map = {
+                generale: "Es. Pizza, Pasta, Dessert...",
+                ingrediente: "Es. Pomodoro, Mozzarella, Pollo...",
+                ristorante: "Es. Da Mario, Pizzeria Napoli...",
+                luogo: "Es. Milano, Roma...",
+                allergene: "Es. Glutine, Lattosio...",
+                piatto_ristorante: "Es. Carbonara (trova chi la fa)..."
+            };
+            input.placeholder = map[tipo] || "Scrivi qui...";
+        }
+
+        async function checkUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const query = params.get('q');
+            const ristorante = params.get('ristorante');
+
+            if (ristorante) {
+                document.getElementById('inputRicerca').value = ristorante;
+                cercaPiattiDiRistorante(ristorante);
+            } else if (query) {
+                document.getElementById('inputRicerca').value = query;
+                eseguiRicerca();
+            }
+        }
+
+        async function cercaPiattiDiRistorante(nomeRistorante) {
+            const container = document.getElementById('containerRisultati');
+            const loading = document.getElementById('loading');
+            
+            container.innerHTML = '';
+            loading.classList.remove('d-none');
+
+            try {
+                const res = await fetch(`${API_URL}/ricerca-avanzata?ristorante=${encodeURIComponent(nomeRistorante)}`);
+                const dati = await res.json();
+                mostraRisultati(dati, 'generale');
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<div class="alert alert-danger">Errore caricamento menu.</div>';
+            } finally {
+                loading.classList.add('d-none');
+            }
+        }
+
+        async function eseguiRicerca() {
+            const tipo = document.getElementById('tipoRicerca').value;
+            const query = document.getElementById('inputRicerca').value.trim();
+            const container = document.getElementById('containerRisultati');
+            const loading = document.getElementById('loading');
+
+            if (!query) { alert("Inserisci qualcosa da cercare!"); return; }
+
+            container.innerHTML = '';
+            loading.classList.remove('d-none');
+
+            let endpoint = '';
+            
+            switch (tipo) {
+                case 'generale': endpoint = `/ricerca?q=${encodeURIComponent(query)}`; break;
+                case 'ingrediente': endpoint = `/ricerca-avanzata?ingrediente=${encodeURIComponent(query)}`; break;
+                case 'ristorante': endpoint = `/ricerca-avanzata?tipo=ristorante&q=${encodeURIComponent(query)}`; break;
+                case 'luogo': endpoint = `/ricerca-avanzata?tipo=ristorante&luogo=${encodeURIComponent(query)}`; break;
+                case 'allergene': endpoint = `/ricerca-avanzata?allergene=${encodeURIComponent(query)}`; break;
+                case 'piatto_ristorante': endpoint = `/ricerca-ristorante-per-piatto?piatto=${encodeURIComponent(query)}`; break;
+            }
+
+            try {
+                const response = await fetch(API_URL + endpoint);
+                if (!response.ok) throw new Error("Errore server");
+                const dati = await response.json();
+                mostraRisultati(dati, tipo);
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `<div class="alert alert-danger">Errore di connessione.</div>`;
+            } finally {
+                loading.classList.add('d-none');
+            }
+        }
+
+        // --- FUNZIONE UNIVERSALE ESTRAZIONE INGREDIENTI ---
+        function getIngredienti(piatto) {
+            // 1. Caso JSON importato (meals1.json): campo 'ingredients' è un ARRAY
+            if (piatto.ingredients && Array.isArray(piatto.ingredients)) {
+                return piatto.ingredients.join(', ');
+            }
+
+            // 2. Caso Inserimento Manuale Ristoratore: campo 'ingredienti' è una STRINGA
+            if (piatto.ingredienti && typeof piatto.ingredienti === 'string') {
+                const ing = piatto.ingredienti.trim();
+                if (ing === "" || ing === "Ingredienti standard") return ""; 
+                return ing;
+            }
+
+            // 3. Caso Legacy (TheMealDB standard API): campi strIngredient1, strIngredient2...
+            let lista = [];
+            for (let i = 1; i <= 20; i++) {
+                const ing = piatto[`strIngredient${i}`];
+                if (ing && ing.trim()) lista.push(ing);
+            }
+            if (lista.length > 0) return lista.join(', ');
+
+            return "Ingredienti non disponibili";
+        }
+
+        function mostraRisultati(dati, tipo) {
+            const container = document.getElementById('containerRisultati');
+            if (!dati || dati.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center"><div class="alert alert-warning">Nessun risultato trovato.</div></div>';
+                return;
+            }
+
+            dati.forEach(item => {
+                if (tipo === 'piatto_ristorante') {
+                    renderCardRistorantePiatto(item, container);
+                } else if (item.tipo === 'ristorante' || item.nomeRistorante) { 
+                    renderCardRistorante(item, container);
+                } else { 
+                    renderCardPiatto(item, container);
+                }
+            });
+        }
+
+        function renderCardPiatto(piatto, container) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4';
+            
+            const img = piatto.thumb || piatto.strMealThumb || 'https://via.placeholder.com/300x200?text=No+Image';
+            const nome = piatto.nome || piatto.strMeal;
+            const rId = piatto.ristoranteId || '';
+            const ristNome = piatto.ristoranteNome || 'Sconosciuto';
+            
+            // Utilizzo la funzione corretta per gli ingredienti
+            const testoIngredienti = getIngredienti(piatto);
+
+            col.innerHTML = `
+                <div class="card h-100 shadow-sm">
+                    <img src="${img}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">${nome}</h5>
+                        <p class="text-muted small mb-1">🏠 ${ristNome}</p>
+                        
+                        <p class="text-muted small text-truncate" title="${testoIngredienti}">
+                            <i class="bi bi-basket"></i> ${testoIngredienti}
+                        </p>
+
+                        <div class="mt-auto d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-primary">€${piatto.prezzo || 'N/D'}</span>
+                            <button class="btn btn-sm btn-outline-success" 
+                                onclick="aggiungiCarrello('${piatto._id}', '${nome.replace(/'/g, "\\'")}', ${piatto.prezzo || 0}, '${img}', '${piatto.categoria}', '${rId}', '${ristNome.replace(/'/g, "\\'")}')">
+                                + Carrello
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            container.appendChild(col);
+        }
+
+        function renderCardRistorante(ristorante, container) {
+            const col = document.createElement('div');
+            col.className = 'col-md-6';
+            let menuHtml = '';
+            if(ristorante.piattiMenu && ristorante.piattiMenu.length > 0) {
+                menuHtml = `<hr><small class="text-muted">Menu: ${ristorante.piattiMenu.map(p => p.nome || p.strMeal).slice(0,3).join(', ')}...</small>`;
+            }
+
+            col.innerHTML = `
+                <div class="card h-100 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">🏪 ${ristorante.nomeRistorante}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>📍 ${ristorante.indirizzo || 'N/D'}</p>
+                        <p>📞 ${ristorante.telefono || 'N/D'}</p>
+                        ${menuHtml}
+                        <a href="ricerca.html?ristorante=${encodeURIComponent(ristorante.nomeRistorante)}" class="btn btn-sm btn-primary mt-2">Vedi Menu</a>
+                    </div>
+                </div>`;
+            container.appendChild(col);
+        }
+
+        function renderCardRistorantePiatto(item, container) {
+            const rist = item.ristorante;
+            const col = document.createElement('div');
+            col.className = 'col-12';
+            
+            const piattiHtml = item.piatti.map(p => {
+                const nomeP = p.nome || p.strMeal;
+                return `<span class="badge bg-success me-1">${nomeP} (€${p.prezzo})</span>`;
+            }).join('');
+
+            col.innerHTML = `
+                <div class="card mb-3 border-success">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">Presso: ${rist.nomeRistorante}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">📍 ${rist.indirizzo}</h6>
+                        <p>Ha trovato:</p>
+                        <div>${piattiHtml}</div>
+                        <a href="ricerca.html?ristorante=${encodeURIComponent(rist.nomeRistorante)}" class="btn btn-sm btn-outline-success mt-2">Vedi Menu Completo</a>
+                    </div>
+                </div>`;
+            container.appendChild(col);
+        }
+
+        function aggiungiCarrello(id, nome, prezzo, thumb, cat, rId, rNome) {
+            if(!localStorage.getItem('_id')) return alert("Effettua il login!");
+            let carrello = JSON.parse(localStorage.getItem('carrello') || '[]');
+            const item = carrello.find(i => i.idMeal === id);
+            if(item) item.quantita++; 
+            else carrello.push({idMeal:id, strMeal:nome, price:prezzo, strMealThumb:thumb, strCategory:cat, ristoranteId:rId, ristoranteNome:rNome, quantita:1});
+            localStorage.setItem('carrello', JSON.stringify(carrello));
+            alert(`${nome} aggiunto!`);
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
