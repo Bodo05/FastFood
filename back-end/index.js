@@ -214,32 +214,56 @@ app.post('/ristoratore/:id/piatti', async (req, res) => {
 app.get('/ristoratore/:id/statistiche', async (req, res) => {
     const id = toObjectId(req.params.id);
     try {
-        const stats = await db.collection('ordini').aggregate([
-            { $match: { ristoranteId: id, stato: 'consegnato' } },
-            { 
-                $group: { 
-                    _id: null, totale: { $sum: "$totale" }, count: { $sum: 1 }, piatti: { $push: "$piatti" } 
-                } 
-            }
-        ]).toArray();
+        // 1. Recuperiamo TUTTI gli ordini di questo ristorante
+        const ordini = await db.collection('ordini').find({ 
+            ristoranteId: id 
+        }).toArray();
 
-        if (stats.length === 0) return res.json({ totaleGuadagni: 0, numeroOrdini: 0, classificaPiatti: [] });
-
-        const piattiFlat = stats[0].piatti.flat();
+        const adesso = new Date();
+        let totaleGuadagni = 0;
+        let numeroOrdini = 0;
         const piattiCount = {};
-        piattiFlat.forEach(p => {
-            const nome = p.strMeal || p.nome;
-            piattiCount[nome] = (piattiCount[nome] || 0) + (p.quantita || 1);
+
+        // 2. Analizziamo ogni ordine
+        ordini.forEach(o => {
+            // Un ordine è "finito" se ha lo stato 'consegnato' OPPURE se il suo tempo è scaduto
+            const fine = o.orarioFine ? new Date(o.orarioFine) : null;
+            const isFinito = o.stato === 'consegnato' || (fine && adesso >= fine);
+
+            // Calcoliamo le statistiche solo per gli ordini finiti
+            if (isFinito) {
+                totaleGuadagni += (o.totale || 0);
+                numeroOrdini++;
+
+                // Conteggio piatti più venduti
+                if (o.piatti && Array.isArray(o.piatti)) {
+                    o.piatti.forEach(p => {
+                        // Supporta sia il formato vecchio che nuovo
+                        const nome = p.nome || p.strMeal; 
+                        // Se non c'è quantità, assumiamo 1
+                        const qty = p.quantita || 1; 
+                        piattiCount[nome] = (piattiCount[nome] || 0) + qty;
+                    });
+                }
+            }
         });
 
-        const classifica = Object.entries(piattiCount)
-            .sort(([,a], [,b]) => b - a).slice(0, 5)
+        // 3. Creiamo la classifica top 5
+        const classificaPiatti = Object.entries(piattiCount)
+            .sort(([,a], [,b]) => b - a) // Ordina decrescente
+            .slice(0, 5) // Prendi i primi 5
             .map(([nome, quantita]) => ({ nome, quantita }));
 
-        res.json({ totaleGuadagni: stats[0].totale, numeroOrdini: stats[0].count, classificaPiatti: classifica });
-    } catch (e) { res.status(500).json({ message: 'Errore statistiche' }); }
-});
+        res.json({ 
+            totaleGuadagni, 
+            numeroOrdini, 
+            classificaPiatti 
+        });
 
+    } catch (e) { 
+        res.status(500).json({ message: 'Errore statistiche' }); 
+    }
+});
 // CATALOGO E RICERCA
 
 app.get('/catalog', async (req, res) => {
