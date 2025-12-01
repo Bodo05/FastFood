@@ -5,14 +5,12 @@ let menuRistoratore = [];   // I piatti scelti dal ristoratore
 
 // 1. Al caricamento della pagina
 window.onload = async function() {
-    console.log("Pagina caricata. Scarico i dati...");
     
     try {
         // Scarico Categorie
         const resCat = await fetch('http://localhost:3000/categorie-catalogo');
         const categorie = await resCat.json();
         
-        // Riempio le tendine
         const selCliente = document.getElementById('prefCliente');
         const selFiltro = document.getElementById('filtroCatalogo');
         
@@ -20,20 +18,17 @@ window.onload = async function() {
         selFiltro.innerHTML = '<option value="">-- Seleziona --</option>';
 
         categorie.forEach(cat => {
-            // Per il cliente
             selCliente.innerHTML += `<option value="${cat}">${cat}</option>`;
-            // Per il filtro ristoratore
             selFiltro.innerHTML += `<option value="${cat}">${cat}</option>`;
         });
 
         // Scarico il Catalogo Piatti (per il ristoratore)
         const resMeals = await fetch('http://localhost:3000/catalog');
         catalogoCompleto = await resMeals.json();
-        console.log(`Catalogo scaricato: ${catalogoCompleto.length} piatti.`);
 
     } catch (e) {
         console.error("Errore caricamento:", e);
-        alert("Errore di connessione al server. Assicurati che 'node index.js' sia attivo.");
+        // Alert rimosso per pulizia, ma l'errore è loggato
     }
 };
 
@@ -41,24 +36,21 @@ window.onload = async function() {
 function cambiaTab(tipo) {
     tipoUtente = tipo;
     
-    // Gestione stile bottoni
-    document.getElementById('btnTabCliente').className = tipo === 'cliente' ? 'tab-btn active-tab' : 'tab-btn';
-    document.getElementById('btnTabRistoratore').className = tipo === 'ristoratore' ? 'tab-btn active-tab' : 'tab-btn';
+    document.getElementById('btnTabCliente').classList.toggle('active-tab', tipo === 'cliente');
+    document.getElementById('btnTabRistoratore').classList.toggle('active-tab', tipo === 'ristoratore');
 
-    // Gestione visibilità campi
     document.getElementById('divCliente').style.display = tipo === 'cliente' ? 'block' : 'none';
     document.getElementById('divRistoratore').style.display = tipo === 'ristoratore' ? 'block' : 'none';
 }
 
 // 3. Quando il ristoratore cambia categoria nel filtro
-document.getElementById('filtroCatalogo').addEventListener('change', function() {
+document.getElementById('filtroCatalogo')?.addEventListener('change', function() {
     const categoriaScelta = this.value;
     const div = document.getElementById('containerPiatti');
-    div.innerHTML = ""; // Pulisco
+    div.innerHTML = ""; 
 
     if (!categoriaScelta) return;
 
-    // Filtro i piatti dal catalogo in memoria
     const piattiFiltrati = catalogoCompleto.filter(p => p.strCategory === categoriaScelta);
 
     if (piattiFiltrati.length === 0) {
@@ -66,9 +58,7 @@ document.getElementById('filtroCatalogo').addEventListener('change', function() 
         return;
     }
 
-    // Disegno le card
     piattiFiltrati.forEach((p, index) => {
-        // Controllo se è già stato aggiunto
         const giaAggiunto = menuRistoratore.some(m => m.nome === p.strMeal);
         
         div.innerHTML += `
@@ -81,7 +71,7 @@ document.getElementById('filtroCatalogo').addEventListener('change', function() 
                         <input type="number" id="prezzo_${index}" class="form-control form-control-sm mb-1" placeholder="Prezzo €" min="0" step="0.50" ${giaAggiunto ? 'disabled' : ''}>
                         <input type="number" id="tempo_${index}" class="form-control form-control-sm mb-1" placeholder="Minuti" min="1" ${giaAggiunto ? 'disabled' : ''}>
                         
-                        <button onclick='aggiungiAlMenu(${index}, "${p.strMeal}", "${p.strCategory}", "${p.strMealThumb}")' 
+                        <button onclick='aggiungiAlMenu(${index}, "${p.strMeal.replace(/"/g, '\\"')}", "${p.strCategory}", "${p.strMealThumb}")' 
                                 class="btn btn-sm w-100 ${giaAggiunto ? 'btn-secondary' : 'btn-success'}" 
                                 id="btn_${index}"
                                 ${giaAggiunto ? 'disabled' : ''}>
@@ -105,22 +95,18 @@ function aggiungiAlMenu(index, nome, cat, img) {
     }
 
     // --- RECUPERO INGREDIENTI VERI DAL CATALOGO ---
-    const piattoOriginale = catalogoCompleto[index]; // catalogoCompleto è globale
+    const piattoOriginale = catalogoCompleto.find(p => p.strMeal === nome) || {}; 
     let listaIngredienti = [];
 
-    // 1. Se il piatto nel JSON ha già un array "ingredients" (formato meals1.json)
     if (piattoOriginale.ingredients && Array.isArray(piattoOriginale.ingredients)) {
         listaIngredienti = piattoOriginale.ingredients;
-    } 
-    // 2. Se il piatto è nel formato TheMealDB (strIngredient1, strIngredient2...)
-    else {
+    } else {
         for(let i=1; i<=20; i++) {
             const ing = piattoOriginale[`strIngredient${i}`];
             if(ing && ing.trim()) listaIngredienti.push(ing);
         }
     }
     
-    // Unisci gli ingredienti in una stringa unica
     const stringaIngredienti = listaIngredienti.join(', ');
     // ----------------------------------------------
 
@@ -131,7 +117,7 @@ function aggiungiAlMenu(index, nome, cat, img) {
         thumb: img,
         prezzo: parseFloat(prezzo),
         tempo: parseInt(tempo),
-        ingredienti: stringaIngredienti || "Ingredienti non specificati" // Salva quelli veri!
+        ingredienti: stringaIngredienti // Salva gli ingredienti veri
     });
 
     // Aggiorno UI
@@ -158,9 +144,8 @@ function aggiornaRiepilogo() {
     div.innerHTML = html;
 }
 
-// 5. FUNZIONE PRINCIPALE DI REGISTRAZIONE
+// 5. FUNZIONE PRINCIPALE DI REGISTRAZIONE (CON PROTEZIONE DA DOPPIO CLICK)
 async function registrati() {
-    // Riferimento al bottone per disabilitarlo
     const btn = document.querySelector('button[onclick="registrati()"]');
     const testoOriginale = btn.innerText;
 
@@ -172,10 +157,15 @@ async function registrati() {
     if (!email || !pass) { alert("Email e Password obbligatorie"); return; }
     if (pass !== conf) { alert("Le password non coincidono"); return; }
 
-    // --- DISABILITA IL BOTTONE ---
+    // --- BLOCCO DOPPIO CLICK ---
     btn.disabled = true;
     btn.innerText = "Registrazione in corso...";
-    // -----------------------------
+    // --------------------------
+    
+    function resetBtn() {
+        btn.disabled = false;
+        btn.innerText = testoOriginale;
+    }
 
     let payload = { email: email, password: pass };
     let urlDestinazione = '';
@@ -183,16 +173,13 @@ async function registrati() {
     if (tipoUtente === 'cliente') {
         urlDestinazione = 'http://localhost:3000/cliente';
         const nome = document.getElementById('nome').value;
+        const cognome = document.getElementById('cognome').value;
         const pref = document.getElementById('prefCliente').value;
         
-        if(!nome) { 
-            alert("Inserisci il nome"); 
-            resetBtn(); // Riabilita se c'è errore
-            return; 
-        }
+        if(!nome) { alert("Inserisci il nome"); resetBtn(); return; }
         
         payload.nome = nome;
-        payload.cognome = document.getElementById('cognome').value;
+        payload.cognome = cognome;
         payload.preferenze = [pref]; 
     } 
     else {
@@ -202,28 +189,14 @@ async function registrati() {
         const piva = document.getElementById('piva').value;
         const telefono = document.getElementById('telefono').value;
 
-        if(!nomeRist || !indirizzo || !piva) { 
-            alert("Compila tutti i dati del ristorante"); 
-            resetBtn(); // Riabilita
-            return; 
-        }
-        if(menuRistoratore.length === 0) { 
-            alert("Devi aggiungere almeno un piatto al menu!"); 
-            resetBtn(); // Riabilita
-            return; 
-        }
+        if(!nomeRist || !indirizzo || !piva) { alert("Compila tutti i dati del ristorante"); resetBtn(); return; }
+        if(menuRistoratore.length === 0) { alert("Devi aggiungere almeno un piatto al menu!"); resetBtn(); return; }
 
         payload.nomeRistorante = nomeRist;
         payload.indirizzo = indirizzo;
         payload.piva = piva;
         payload.telefono = telefono;
         payload.piatti = menuRistoratore;
-    }
-
-    // Funzione helper per riabilitare il bottone in caso di errore
-    function resetBtn() {
-        btn.disabled = false;
-        btn.innerText = testoOriginale;
     }
 
     // Invio al server
@@ -241,7 +214,7 @@ async function registrati() {
             window.location.href = 'login.html';
         } else {
             alert("Errore: " + (data.message || "Impossibile registrare"));
-            resetBtn(); // Riabilita se il server dà errore (es. email già usata)
+            resetBtn(); // Riabilita se il server dà errore
         }
     } catch (e) {
         console.error(e);

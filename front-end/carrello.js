@@ -4,6 +4,8 @@ const CLIENT_ID = localStorage.getItem('_id');
 window.onload = () => {
     if (!CLIENT_ID) { alert("Login richiesto"); location.href='login.html'; return; }
     aggiornaCarrello();
+    // Inizializza subito lo stato per l'asporto
+    toggleIndirizzo(); 
 };
 
 function aggiornaCarrello() {
@@ -21,40 +23,79 @@ function aggiornaCarrello() {
     }
 
     let totale = 0;
-    carrello.forEach((p, i) => {
-        const sub = (p.price || p.prezzo || 0) * p.quantita;
-        totale += sub;
-        container.innerHTML += `
-            <div class="card mb-2 p-2 shadow-sm">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div><b>${p.strMeal||p.nome}</b> <span class="text-muted">x${p.quantita}</span></div>
-                    <div class="text-primary fw-bold">€${sub.toFixed(2)}</div>
-                </div>
-                <div class="text-end mt-1">
-                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="modifica(${i}, 1)">+</button>
-                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="modifica(${i}, -1)">-</button>
-                    <button class="btn btn-sm btn-danger py-0" onclick="rimuovi(${i})">×</button>
-                </div>
-            </div>`;
+    
+    // Raggruppa i piatti per ristorante (necessario per l'ordine unico)
+    const gruppi = carrello.reduce((acc, item) => {
+        const key = item.ristoranteId;
+        if (!acc[key]) acc[key] = {
+            id: key,
+            nome: item.ristoranteNome,
+            piatti: []
+        };
+        acc[key].piatti.push(item);
+        return acc;
+    }, {});
+
+    // Renderizza i piatti
+    Object.values(gruppi).forEach(gruppo => {
+        let htmlPiatti = '';
+        gruppo.piatti.forEach(p => {
+            const sub = (p.price || p.prezzo || 0) * p.quantita;
+            totale += sub;
+            
+            // Render del singolo piatto con immagine
+            htmlPiatti += `
+                <li class="list-group-item d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <img src="${p.strMealThumb || 'https://via.placeholder.com/50'}" alt="${p.strMeal}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                        <span class="badge bg-secondary me-2">${p.quantita}x</span>
+                        <strong>${p.strMeal || p.nome}</strong>
+                    </div>
+                    <div>
+                        <span>€${sub.toFixed(2)}</span>
+                        <button class="btn btn-sm btn-outline-secondary ms-2 me-1 py-0" onclick="modifica('${p.idMeal}', 1)">+</button>
+                        <button class="btn btn-sm btn-outline-secondary py-0" onclick="modifica('${p.idMeal}', -1)">-</button>
+                    </div>
+                </li>
+            `;
+        });
+        
+        container.innerHTML += `<ul class="list-group mb-3">${htmlPiatti}</ul>`;
     });
+
+
     if(totaleEl) totaleEl.innerText = totale.toFixed(2);
     if(azioniEl) azioniEl.style.display = 'block';
 }
 
-function modifica(i, q) {
-    carrello[i].quantita += q;
-    if (carrello[i].quantita < 1) carrello.splice(i, 1);
-    salva();
+function trovaIndice(idMeal) {
+    return carrello.findIndex(item => item.idMeal === idMeal);
 }
-function rimuovi(i) { carrello.splice(i, 1); salva(); }
+
+function modifica(idMeal, q) {
+    const i = trovaIndice(idMeal);
+    if (i !== -1) {
+        carrello[i].quantita += q;
+        if (carrello[i].quantita < 1) carrello.splice(i, 1);
+        salva();
+    }
+}
+function rimuovi(idMeal) { 
+    const i = trovaIndice(idMeal);
+    if (i !== -1) carrello.splice(i, 1);
+    salva(); 
+}
 function svuotaCarrello() { carrello = []; salva(); }
-function salva() { localStorage.setItem("carrello", JSON.stringify(carrello)); aggiornaCarrello(); }
+function salva() { 
+    localStorage.setItem("carrello", JSON.stringify(carrello)); 
+    aggiornaCarrello();
+    calcolaPreventivo(); // Ricalcola il preventivo dopo la modifica
+}
 
 function mostraCheckout() {
     document.getElementById('checkoutSection').style.display = 'block';
     document.getElementById('checkoutSection').scrollIntoView({behavior:'smooth'});
     
-    // Se è asporto, non serve l'indirizzo, calcola subito il preventivo
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     if(tipo === 'asporto') {
         calcolaPreventivo();
@@ -67,21 +108,22 @@ function toggleIndirizzo() {
     calcolaPreventivo(); 
 }
 
+// Calcola costi e tempi prima della conferma
 async function calcolaPreventivo() {
     const indirizzo = document.getElementById('indirizzo').value;
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const btn = document.getElementById('btnPaga');
     const box = document.getElementById('boxPreventivo');
+    const totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
 
-    // Se domicilio ma senza indirizzo, nascondi e disabilita
-    if(tipo === 'domicilio' && !indirizzo) {
-        box.style.display = 'none';
-        btn.disabled = true;
+    box.style.display = 'none';
+    btn.disabled = true;
+
+    if (carrello.length === 0) return;
+
+    if(tipo === 'domicilio' && indirizzo.length < 5) {
         return;
     }
-
-    // Calcolo totale piatti locale per visualizzazione
-    let totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
 
     const payload = {
         piatti: carrello,
@@ -91,7 +133,6 @@ async function calcolaPreventivo() {
     };
 
     try {
-        // Chiamata all'API di preventivo
         const res = await fetch('http://localhost:3000/ordine/preventivo', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -109,10 +150,21 @@ async function calcolaPreventivo() {
 
         box.style.display = 'block';
         btn.disabled = false; // Abilita pagamento
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+        console.error(e); 
+        box.innerHTML = `<div class="text-danger">Impossibile calcolare i costi. Controlla l'indirizzo e la connessione.</div>`;
+        btn.disabled = true;
+    }
 }
 
 async function inviaOrdine() {
+    const btn = document.querySelector('#formOrdine button[type="submit"]');
+    const testoOriginale = btn.innerText;
+    
+    // Blocca il doppio click
+    btn.disabled = true;
+    btn.innerText = "Invio ordine...";
+
     let totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const indirizzo = document.getElementById('indirizzo').value;
@@ -126,15 +178,21 @@ async function inviaOrdine() {
         indirizzoConsegna: tipo === 'domicilio' ? indirizzo : null
     };
 
-    const res = await fetch('http://localhost:3000/ordine', {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
-    });
+    try {
+        const res = await fetch('http://localhost:3000/ordine', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+        });
 
-    if(res.ok) {
-        alert("Ordine confermato!");
-        svuotaCarrello();
-        window.location.href = 'cliente.html';
-    } else {
-        alert("Errore invio");
+        if(res.ok) {
+            alert("Ordine confermato!");
+            svuotaCarrello();
+            window.location.href = 'cliente.html';
+        } else {
+            alert("Errore invio");
+            btn.disabled = false; btn.innerText = testoOriginale;
+        }
+    } catch(e) {
+        alert("Errore di connessione.");
+        btn.disabled = false; btn.innerText = testoOriginale;
     }
 }

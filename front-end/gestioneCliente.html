@@ -57,23 +57,34 @@
                 const cons = parseFloat(o.costoConsegna||0);
                 const cibo = tot - cons;
                 const data = new Date(o.dataCreazione).toLocaleDateString();
+                const tipoConsegna = o.tipoConsegna === 'domicilio' ? 'Domicilio' : 'Asporto';
+
+                let badgeClass = 'bg-secondary';
+                if(o.stato === 'in_coda') badgeClass = 'bg-warning text-dark';
+                if(o.stato === 'in_preparazione') badgeClass = 'bg-primary';
+                if(o.stato === 'consegnato') badgeClass = 'bg-success';
+                
+                // Dettaglio Spedizione Condizionale
+                const infoConsegna = o.tipoConsegna === 'domicilio' 
+                    ? `<span class="text-danger small">+€${cons.toFixed(2)} spedizione</span>` 
+                    : '<span class="text-success small">Ritiro gratuito</span>';
 
                 div.innerHTML += `
                 <div class="list-group-item">
                     <div class="d-flex justify-content-between">
                         <h5 class="mb-1">${o.ristoranteNome || 'Ristorante'}</h5>
-                        <small class="badge bg-${o.stato==='consegnato'?'success':(o.stato==='in_preparazione'?'primary':'warning text-dark')}">${o.stato.replace('_',' ')}</small>
+                        <small class="badge ${badgeClass}">${o.stato.replace('_',' ')}</small>
                     </div>
                     <p class="mb-1 small text-muted">
                         ${o.piatti.map(p=>p.nome||p.strMeal).join(', ')}
                     </p>
                     <div class="d-flex justify-content-between align-items-center mt-2">
                         <small class="text-secondary">
-                            📅 ${data} <br>
-                            ⏱ ${o.tempoPreparazione||15}m prep + ${o.tempoViaggio||0}m viaggio
+                            📅 ${data} • ${tipoConsegna}<br>
+                            ⏱ Prep: ${o.tempoPreparazione||15}m + Viaggio: ${o.tempoViaggio||0}m
                         </small>
                         <div class="text-end">
-                            <small class="d-block text-muted">Cibo: €${cibo.toFixed(2)} + Sped: €${cons.toFixed(2)}</small>
+                            <small class="d-block text-muted">Cibo: €${cibo.toFixed(2)} ${infoConsegna}</small>
                             <span class="text-primary fw-bold">Totale: €${tot.toFixed(2)}</span>
                         </div>
                     </div>
