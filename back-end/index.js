@@ -282,15 +282,32 @@ app.post('/ordine', async (req, res) => {
 
     try {
         let minutiTotali = Math.max(...piatti.map(p => parseInt(p.tempo) || 15));
-        
+        let costoConsegnaCalcolato = 0;
+        let totaleFinale = parseFloat(totale); // Totale parziale degli articoli
+
         if (tipoConsegna === 'domicilio' && indirizzoConsegna) {
             const rist = await db.collection('ristoratori').findOne({ _id: rId });
             const coordsC = await getCoordinates(indirizzoConsegna);
+            
             if (rist?.lat && coordsC) {
-                minutiTotali += Math.ceil(calcolaDistanza(rist.lat, rist.lon, coordsC.lat, coordsC.lon) * 5);
-            } else minutiTotali += 15;
+                const distKm = calcolaDistanza(rist.lat, rist.lon, coordsC.lat, coordsC.lon);
+                
+                // 1. Calcolo Tempo (5 min al km)
+                minutiTotali += Math.ceil(distKm * 5);
+
+                // 2. Calcolo Costo (1€ al km, minimo 2€)
+                costoConsegnaCalcolato = Math.max(2, Math.round(distKm * 1)); 
+            } else {
+                // Fallback se non trova coordinate
+                minutiTotali += 15;
+                costoConsegnaCalcolato = 5; // Costo fisso di default
+            }
         }
 
+        // Aggiungo il costo di consegna al totale
+        totaleFinale += costoConsegnaCalcolato;
+
+        // --- Scheduler & Salvataggio ---
         const durataMs = minutiTotali * 1000; 
         const ristData = await db.collection('ristoratori').findOne({ _id: rId });
         
@@ -304,12 +321,34 @@ app.post('/ordine', async (req, res) => {
         await db.collection('ristoratori').updateOne({ _id: rId }, { $set: { prossimoSlotLibero: orarioFine } });
 
         const ordine = {
-            clienteId: toObjectId(clienteId), ristoranteId: rId, piatti, totale: parseFloat(totale), 
-            tipoConsegna, indirizzoConsegna, orarioInizio, orarioFine, dataCreazione: adesso, stato: 'in_coda'
+            clienteId: toObjectId(clienteId), 
+            ristoranteId: rId, 
+            piatti, 
+            totale: totaleFinale, // Salvo il totale maggiorato
+            costoConsegna: costoConsegnaCalcolato, // Salvo anche il costo specifico
+            tipoConsegna, 
+            indirizzoConsegna, 
+            orarioInizio, 
+            orarioFine, 
+            dataCreazione: adesso, 
+            stato: 'in_coda'
         };
+        
         const result = await db.collection('ordini').insertOne(ordine);
-        res.json({ _id: result.insertedId, orarioInizio, orarioFine });
-    } catch(e) { res.status(500).json({}); }
+        
+        // Restituisco al frontend i dati aggiornati
+        res.json({ 
+            _id: result.insertedId, 
+            orarioInizio, 
+            orarioFine, 
+            totaleFinale,        // Fondamentale per l'alert
+            costoConsegnaCalcolato 
+        });
+
+    } catch(e) { 
+        console.error(e);
+        res.status(500).json({ message: 'Errore creazione ordine' }); 
+    }
 });
 
 app.get('/ristoratore/:id/ordini', async (req, res) => {

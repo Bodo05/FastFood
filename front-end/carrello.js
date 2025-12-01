@@ -120,15 +120,12 @@ async function inviaOrdine() {
     const btn = document.querySelector('#formOrdine button[type="submit"]');
     const testoOriginale = btn.innerText;
     
-    // Disabilita bottone per evitare doppi click
     btn.disabled = true;
-    btn.innerText = "Elaborazione in corso...";
+    btn.innerText = "Calcolo costi...";
 
-    // 1. Calcola Totale
-    let totaleFinale = 0;
-    carrello.forEach(p => totaleFinale += (p.price || p.prezzo || 0) * p.quantita);
+    let totalePiatti = 0;
+    carrello.forEach(p => totalePiatti += (p.price || p.prezzo || 0) * p.quantita);
 
-    // 2. Recupera Dati dal Form
     const tipoConsegna = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const indirizzoConsegna = document.getElementById('indirizzo').value;
     const ristoranteId = carrello[0].ristoranteId;
@@ -143,7 +140,7 @@ async function inviaOrdine() {
         clienteId: CLIENT_ID,
         ristoranteId: ristoranteId,
         piatti: carrello,
-        totale: totaleFinale,
+        totale: totalePiatti, // Inviamo il parziale, il server aggiungerà la consegna
         tipoConsegna: tipoConsegna,
         indirizzoConsegna: tipoConsegna === 'domicilio' ? indirizzoConsegna : null
     };
@@ -158,14 +155,19 @@ async function inviaOrdine() {
         const data = await res.json();
 
         if (res.ok) {
-            // Se c'è stato un calcolo del tempo viaggio, mostralo
-            let msg = `Ordine inviato con successo!\nTotale pagato: €${totaleFinale.toFixed(2)}`;
-            if(data.minutiTotali) {
-                msg += `\nTempo stimato: ${data.minutiTotali} minuti.`;
+            // Messaggio completo con i costi calcolati dal server
+            let msg = `✅ Ordine inviato con successo!\n\n`;
+            msg += `🍲 Piatti: €${totalePiatti.toFixed(2)}\n`;
+            
+            if(data.costoConsegnaCalcolato > 0) {
+                msg += `🛵 Consegna: €${data.costoConsegnaCalcolato.toFixed(2)}\n`;
             }
+            
+            msg += `--------------------------\n`;
+            msg += `💰 TOTALE: €${data.totaleFinale.toFixed(2)}`;
+
             alert(msg);
             
-            // Pulisci e esci
             carrello = [];
             salvaEaggiorna();
             window.location.href = 'cliente.html';

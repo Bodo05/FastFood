@@ -55,50 +55,32 @@
     const id = localStorage.getItem('_id'); 
     if(!id) window.location.href='login.html';
 
-    // 1. Carica le Categorie dal Catalogo Generale (Fix per farle vedere sempre)
     async function loadCategorie() {
       try {
-          // Nota: Chiamiamo categorie-catalogo per avere la lista completa
           const res = await fetch('http://localhost:3000/categorie-catalogo');
           const categorie = await res.json();
-          
           const select = document.getElementById('categoriaPreferita');
           select.innerHTML = '<option value="">-- Seleziona Categoria --</option>';
-          
-          if(categorie.length > 0) {
-              categorie.forEach(cat => {
-                const o = document.createElement('option');
-                o.value = cat;
-                o.textContent = cat;
-                select.appendChild(o);
-              });
-          } else {
-              select.innerHTML = '<option value="">Nessuna categoria disponibile</option>';
-          }
-      } catch(e) { console.error("Err categorie", e); }
+          categorie.forEach(cat => {
+            const o = document.createElement('option');
+            o.value = cat; o.textContent = cat; select.appendChild(o);
+          });
+      } catch(e) { console.error(e); }
     }
 
-    // 2. Carica Dati Utente e Ordini
     async function loadData() {
-      // Prima carichiamo le categorie per poter selezionare quella dell'utente
       await loadCategorie();
       
       try {
-          // Fetch Profilo
+          // Profilo
           const res = await fetch(`http://localhost:3000/cliente/${id}`);
-          if(!res.ok) throw new Error("Errore profilo");
           const c = await res.json();
-          
           document.getElementById('nome').value = c.nome || '';
           document.getElementById('cognome').value = c.cognome || '';
           document.getElementById('email').value = c.email || '';
-          
-          // Imposta la preferenza salvata
-          if(c.preferenze && c.preferenze.length > 0) {
-              document.getElementById('categoriaPreferita').value = c.preferenze[0];
-          }
+          if(c.preferenze && c.preferenze.length > 0) document.getElementById('categoriaPreferita').value = c.preferenze[0];
 
-          // Fetch Ordini
+          // Ordini
           const ordRes = await fetch(`http://localhost:3000/cliente/${id}/ordini`);
           const ordini = await ordRes.json();
           const container = document.getElementById('storicoOrdini');
@@ -109,39 +91,41 @@
           } else {
               ordini.forEach(o => {
                   const data = new Date(o.dataCreazione).toLocaleDateString();
-                  // Gestione colori stato
+                  
                   let badgeClass = 'bg-secondary';
-                  if(o.stato === 'ordinato') badgeClass = 'bg-warning text-dark';
+                  if(o.stato === 'in_coda') badgeClass = 'bg-warning text-dark';
                   if(o.stato === 'in_preparazione') badgeClass = 'bg-primary';
-                  if(o.stato === 'in_consegna') badgeClass = 'bg-info text-dark';
                   if(o.stato === 'consegnato') badgeClass = 'bg-success';
 
-                  // Recupera nome ristorante (dall'oggetto o dalla lookup)
-                  const nomeRist = o.ristoranteInfo?.nomeRistorante || o.ristoranteNome || 'Ristorante';
+                  // --- CALCOLO DETTAGLIO SPESE ---
+                  const costoConsegna = parseFloat(o.costoConsegna || 0);
+                  const totale = parseFloat(o.totale || 0);
+                  const costoCibo = totale - costoConsegna;
+                  const infoConsegna = o.tipoConsegna === 'domicilio' 
+                        ? `<span class="text-danger small">+€${costoConsegna.toFixed(2)} spedizione</span>` 
+                        : '<span class="text-success small">Ritiro gratuito</span>';
 
                   const item = document.createElement('div');
                   item.className = 'list-group-item';
                   item.innerHTML = `
                     <div class="d-flex w-100 justify-content-between align-items-center mb-1">
-                      <h6 class="mb-0 fw-bold">${nomeRist}</h6>
+                      <h6 class="mb-0 fw-bold">${o.ristoranteNome || 'Ristorante'}</h6>
                       <span class="badge ${badgeClass}">${o.stato.replace('_', ' ').toUpperCase()}</span>
                     </div>
-                    <div class="d-flex w-100 justify-content-between">
-                        <small class="text-muted">${data}</small>
-                        <span class="fw-bold text-primary">€${o.totale.toFixed(2)}</span>
+                    
+                    <div class="d-flex w-100 justify-content-between align-items-end">
+                        <small class="text-muted">
+                            ${data} • ${o.piatti.length} articoli<br>
+                            Cibo: €${costoCibo.toFixed(2)} <br>
+                            ${infoConsegna}
+                        </small>
+                        <span class="h5 mb-0 text-primary fw-bold">Tot: €${totale.toFixed(2)}</span>
                     </div>
-                    <small class="text-muted d-block mt-1">
-                        ${o.tipoConsegna === 'domicilio' ? '🛵 A Domicilio' : '🛍️ Asporto'} 
-                        - ${o.piatti.length} articoli
-                    </small>
                   `;
                   container.appendChild(item);
               });
           }
-      } catch(e) {
-          console.error(e);
-          alert('Errore nel caricamento dei dati.');
-      }
+      } catch(e) { console.error(e); }
     }
 
     async function aggiorna() {
@@ -149,28 +133,21 @@
       const cognome = document.getElementById('cognome').value;
       const cat = document.getElementById('categoriaPreferita').value;
       const preferenze = cat ? [cat] : [];
-      
       try {
-          const res = await fetch(`http://localhost:3000/cliente/${id}`, {
-            method:'PUT',
-            headers:{'Content-Type':'application/json'}, 
+          await fetch(`http://localhost:3000/cliente/${id}`, {
+            method:'PUT', headers:{'Content-Type':'application/json'}, 
             body: JSON.stringify({ nome, cognome, preferenze })
           });
-          if(res.ok) alert('Profilo Aggiornato!');
-          else alert('Errore aggiornamento');
-      } catch(e) { alert("Errore connessione"); }
+          alert('Profilo Aggiornato!');
+      } catch(e) { alert("Errore"); }
     }
 
     async function elimina() {
-      if(!confirm('Sei sicuro di voler eliminare il tuo account?')) return;
+      if(!confirm('Eliminare account?')) return;
       try {
-          const res = await fetch(`http://localhost:3000/cliente/${id}`, { method:'DELETE' });
-          if(res.ok){ 
-            alert('Account eliminato.'); 
-            localStorage.clear(); 
-            location.href='login.html'; 
-          } else alert('Errore eliminazione');
-      } catch(e) { alert("Errore connessione"); }
+          await fetch(`http://localhost:3000/cliente/${id}`, { method:'DELETE' });
+          localStorage.clear(); location.href='login.html'; 
+      } catch(e) { alert("Errore"); }
     }
 
     loadData();
