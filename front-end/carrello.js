@@ -13,15 +13,16 @@ window.onload = () => {
 function aggiornaCarrello() {
     const container = document.getElementById("carrelloContainer");
     const totaleElement = document.getElementById("totale");
+    const azioniDiv = document.getElementById("azioniCarrello");
+    const checkoutDiv = document.getElementById("checkoutSection");
     
     container.innerHTML = "";
     
     if (carrello.length === 0) {
         container.innerHTML = '<div class="alert alert-warning text-center">Il carrello è vuoto. <a href="cliente.html">Torna al menu</a></div>';
         if(totaleElement) totaleElement.innerText = "0.00";
-        // Nascondi la sezione checkout se vuoto
-        const checkoutParams = document.getElementById('azioniCarrello');
-        if(checkoutParams) checkoutParams.style.display = 'none';
+        if(azioniDiv) azioniDiv.style.display = 'none';
+        if(checkoutDiv) checkoutDiv.style.display = 'none';
         return;
     }
 
@@ -59,14 +60,8 @@ function aggiornaCarrello() {
         container.appendChild(card);
     });
     
-    // AGGIORNA IL TOTALE NELLA PAGINA
-    if(totaleElement) {
-        totaleElement.innerText = totaleCalcolato.toFixed(2);
-    }
-    
-    // Mostra la sezione azioni se c'erano articoli
-    const checkoutParams = document.getElementById('azioniCarrello');
-    if(checkoutParams) checkoutParams.style.display = 'block';
+    if(totaleElement) totaleElement.innerText = totaleCalcolato.toFixed(2);
+    if(azioniDiv) azioniDiv.style.display = 'block';
 }
 
 function modificaQuantita(index, variazione) {
@@ -74,46 +69,73 @@ function modificaQuantita(index, variazione) {
     if (carrello[index].quantita < 1) {
         rimuoviDalCarrello(index);
     } else {
-        localStorage.setItem("carrello", JSON.stringify(carrello));
-        aggiornaCarrello();
+        salvaEaggiorna();
     }
 }
 
 function rimuoviDalCarrello(index) {
     if(confirm('Rimuovere questo piatto?')) {
         carrello.splice(index, 1);
-        localStorage.setItem("carrello", JSON.stringify(carrello));
-        aggiornaCarrello();
+        salvaEaggiorna();
     }
 }
 
 function svuotaCarrello() {
     if(confirm('Svuotare tutto il carrello?')) {
         carrello = [];
-        localStorage.setItem("carrello", JSON.stringify(carrello));
-        aggiornaCarrello();
+        salvaEaggiorna();
+    }
+}
+
+function salvaEaggiorna() {
+    localStorage.setItem("carrello", JSON.stringify(carrello));
+    aggiornaCarrello();
+}
+
+// --- FUNZIONI DI CHECKOUT ---
+
+function mostraCheckout() {
+    const checkout = document.getElementById('checkoutSection');
+    checkout.style.display = 'block';
+    // Scorrimento fluido verso il basso
+    checkout.scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleIndirizzo() {
+    const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
+    const divIndirizzo = document.getElementById('divIndirizzo');
+    const inputIndirizzo = document.getElementById('indirizzo');
+    
+    if (tipo === 'domicilio') {
+        divIndirizzo.style.display = 'block';
+        inputIndirizzo.required = true;
+    } else {
+        divIndirizzo.style.display = 'none';
+        inputIndirizzo.required = false;
+        inputIndirizzo.value = ''; // Pulisce se si sceglie asporto
     }
 }
 
 async function inviaOrdine() {
-    const btn = document.querySelector('#azioniCarrello button.btn-success');
+    const btn = document.querySelector('#formOrdine button[type="submit"]');
+    const testoOriginale = btn.innerText;
     
-    // Calcoliamo il totale finale
+    // Disabilita bottone per evitare doppi click
+    btn.disabled = true;
+    btn.innerText = "Elaborazione in corso...";
+
+    // 1. Calcola Totale
     let totaleFinale = 0;
     carrello.forEach(p => totaleFinale += (p.price || p.prezzo || 0) * p.quantita);
 
-    if(totaleFinale === 0) return alert("Carrello vuoto");
-
-    // Prendiamo l'indirizzo se c'è
-    const indirizzoInput = document.getElementById('indirizzo');
-    const indirizzoConsegna = indirizzoInput ? indirizzoInput.value : '';
-    
-    // Per semplicità universitaria, prendiamo il primo ristorante ID trovato nel carrello
-    // (Idealmente non dovresti mischiare ristoranti, ma se succede prendiamo il primo)
+    // 2. Recupera Dati dal Form
+    const tipoConsegna = document.querySelector('input[name="tipoConsegna"]:checked').value;
+    const indirizzoConsegna = document.getElementById('indirizzo').value;
     const ristoranteId = carrello[0].ristoranteId;
 
-    if(!ristoranteId) {
-        alert("Errore dati ristorante. Svuota il carrello e riprova.");
+    if (!ristoranteId) {
+        alert("Errore dati ristorante. Riprova.");
+        btn.disabled = false; btn.innerText = testoOriginale;
         return;
     }
 
@@ -121,9 +143,9 @@ async function inviaOrdine() {
         clienteId: CLIENT_ID,
         ristoranteId: ristoranteId,
         piatti: carrello,
-        totale: totaleFinale, // INVIO IL TOTALE AL SERVER
-        tipoConsegna: document.querySelector('input[name="tipoConsegna"]:checked')?.value || 'asporto',
-        indirizzoConsegna: indirizzoConsegna
+        totale: totaleFinale,
+        tipoConsegna: tipoConsegna,
+        indirizzoConsegna: tipoConsegna === 'domicilio' ? indirizzoConsegna : null
     };
 
     try {
@@ -133,51 +155,27 @@ async function inviaOrdine() {
             body: JSON.stringify(payload)
         });
 
+        const data = await res.json();
+
         if (res.ok) {
-            alert(`Ordine inviato! Totale da pagare: €${totaleFinale.toFixed(2)}`);
+            // Se c'è stato un calcolo del tempo viaggio, mostralo
+            let msg = `Ordine inviato con successo!\nTotale pagato: €${totaleFinale.toFixed(2)}`;
+            if(data.minutiTotali) {
+                msg += `\nTempo stimato: ${data.minutiTotali} minuti.`;
+            }
+            alert(msg);
+            
+            // Pulisci e esci
             carrello = [];
-            localStorage.setItem("carrello", "[]");
+            salvaEaggiorna();
             window.location.href = 'cliente.html';
         } else {
-            alert("Errore nell'invio dell'ordine.");
+            alert("Errore: " + (data.message || "Impossibile inviare ordine"));
+            btn.disabled = false; btn.innerText = testoOriginale;
         }
     } catch (e) {
         console.error(e);
         alert("Errore di connessione.");
+        btn.disabled = false; btn.innerText = testoOriginale;
     }
-}
-
-function mostraCheckout() {
-    // In questa versione semplificata, mostra un form o invia direttamente
-    // Se hai un div hidden per l'indirizzo, mostralo qui.
-    // Altrimenti chiedi l'indirizzo con un prompt per fare prima:
-    
-    const tipo = confirm("Vuoi la consegna a domicilio? (OK = Sì, Annulla = Asporto)");
-    
-    let indirizzo = "";
-    let tipoConsegna = "asporto";
-
-    if(tipo) {
-        tipoConsegna = "domicilio";
-        indirizzo = prompt("Inserisci indirizzo di consegna:", "Via Roma 1, Milano");
-        if(!indirizzo) return; // Annullato
-    }
-
-    // Creiamo input nascosti o simuliamo il form per la funzione inviaOrdine
-    // Oppure chiamiamo direttamente la logica qui:
-    
-    // Hack per riutilizzare la funzione inviaOrdine senza il form HTML complesso
-    // Creiamo al volo gli elementi se non esistono
-    if(!document.getElementById('indirizzo')) {
-        const i = document.createElement('input'); i.id='indirizzo'; i.value=indirizzo; i.type='hidden'; document.body.appendChild(i);
-    } else {
-        document.getElementById('indirizzo').value = indirizzo;
-    }
-    
-    // Creiamo input radio fake
-    if(!document.querySelector('input[name="tipoConsegna"]')) {
-       const r = document.createElement('input'); r.type='radio'; r.name='tipoConsegna'; r.value=tipoConsegna; r.checked=true; document.body.appendChild(r);
-    }
-
-    inviaOrdine();
 }
