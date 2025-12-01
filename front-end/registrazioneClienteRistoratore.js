@@ -160,6 +160,10 @@ function aggiornaRiepilogo() {
 
 // 5. FUNZIONE PRINCIPALE DI REGISTRAZIONE
 async function registrati() {
+    // Riferimento al bottone per disabilitarlo
+    const btn = document.querySelector('button[onclick="registrati()"]');
+    const testoOriginale = btn.innerText;
+
     // Dati comuni
     const email = document.getElementById('email').value;
     const pass = document.getElementById('pass').value;
@@ -167,6 +171,11 @@ async function registrati() {
 
     if (!email || !pass) { alert("Email e Password obbligatorie"); return; }
     if (pass !== conf) { alert("Le password non coincidono"); return; }
+
+    // --- DISABILITA IL BOTTONE ---
+    btn.disabled = true;
+    btn.innerText = "Registrazione in corso...";
+    // -----------------------------
 
     let payload = { email: email, password: pass };
     let urlDestinazione = '';
@@ -176,11 +185,15 @@ async function registrati() {
         const nome = document.getElementById('nome').value;
         const pref = document.getElementById('prefCliente').value;
         
-        if(!nome) { alert("Inserisci il nome"); return; }
+        if(!nome) { 
+            alert("Inserisci il nome"); 
+            resetBtn(); // Riabilita se c'è errore
+            return; 
+        }
         
         payload.nome = nome;
         payload.cognome = document.getElementById('cognome').value;
-        payload.preferenze = [pref]; // Il server si aspetta un array
+        payload.preferenze = [pref]; 
     } 
     else {
         urlDestinazione = 'http://localhost:3000/ristoratore';
@@ -189,14 +202,28 @@ async function registrati() {
         const piva = document.getElementById('piva').value;
         const telefono = document.getElementById('telefono').value;
 
-        if(!nomeRist || !indirizzo || !piva) { alert("Compila tutti i dati del ristorante"); return; }
-        if(menuRistoratore.length === 0) { alert("Devi aggiungere almeno un piatto al menu!"); return; }
+        if(!nomeRist || !indirizzo || !piva) { 
+            alert("Compila tutti i dati del ristorante"); 
+            resetBtn(); // Riabilita
+            return; 
+        }
+        if(menuRistoratore.length === 0) { 
+            alert("Devi aggiungere almeno un piatto al menu!"); 
+            resetBtn(); // Riabilita
+            return; 
+        }
 
         payload.nomeRistorante = nomeRist;
         payload.indirizzo = indirizzo;
         payload.piva = piva;
         payload.telefono = telefono;
         payload.piatti = menuRistoratore;
+    }
+
+    // Funzione helper per riabilitare il bottone in caso di errore
+    function resetBtn() {
+        btn.disabled = false;
+        btn.innerText = testoOriginale;
     }
 
     // Invio al server
@@ -214,9 +241,11 @@ async function registrati() {
             window.location.href = 'login.html';
         } else {
             alert("Errore: " + (data.message || "Impossibile registrare"));
+            resetBtn(); // Riabilita se il server dà errore (es. email già usata)
         }
     } catch (e) {
         console.error(e);
         alert("Errore di connessione al server.");
+        resetBtn(); // Riabilita se cade la connessione
     }
 }
