@@ -81,6 +81,7 @@
 
             if (ristorante) {
                 document.getElementById('inputRicerca').value = ristorante;
+                document.getElementById('tipoRicerca').value = 'ristorante';
                 cercaPiattiDiRistorante(ristorante);
             } else if (query) {
                 document.getElementById('inputRicerca').value = query;
@@ -96,12 +97,17 @@
             loading.classList.remove('d-none');
 
             try {
-                const res = await fetch(`${API_URL}/ricerca-avanzata?ristorante=${encodeURIComponent(nomeRistorante)}`);
+                // NOTA: Per "Vedi Menu" usiamo la ricerca per ristorante che restituisce il menu
+                const res = await fetch(`${API_URL}/ricerca/ristorante?q=${encodeURIComponent(nomeRistorante)}`);
                 const dati = await res.json();
-                mostraRisultati(dati, 'generale');
+                
+                if (dati.length > 0 && dati[0].piattiMenu) {
+                    mostraRisultati(dati[0].piattiMenu, 'generale');
+                } else {
+                    container.innerHTML = '<div class="alert alert-warning">Nessun piatto trovato.</div>';
+                }
             } catch (err) {
                 console.error(err);
-                container.innerHTML = '<div class="alert alert-danger">Errore caricamento menu.</div>';
             } finally {
                 loading.classList.add('d-none');
             }
@@ -120,13 +126,14 @@
 
             let endpoint = '';
             
+            // --- MAPPING DELLE NUOVE ROTTE SEPARATE ---
             switch (tipo) {
-                case 'generale': endpoint = `/ricerca?q=${encodeURIComponent(query)}`; break;
-                case 'ingrediente': endpoint = `/ricerca-avanzata?ingrediente=${encodeURIComponent(query)}`; break;
-                case 'ristorante': endpoint = `/ricerca-avanzata?tipo=ristorante&q=${encodeURIComponent(query)}`; break;
-                case 'luogo': endpoint = `/ricerca-avanzata?tipo=ristorante&luogo=${encodeURIComponent(query)}`; break;
-                case 'allergene': endpoint = `/ricerca-avanzata?allergene=${encodeURIComponent(query)}`; break;
-                case 'piatto_ristorante': endpoint = `/ricerca-ristorante-per-piatto?piatto=${encodeURIComponent(query)}`; break;
+                case 'generale': endpoint = `/ricerca/generale?q=${encodeURIComponent(query)}`; break;
+                case 'ingrediente': endpoint = `/ricerca/ingrediente?q=${encodeURIComponent(query)}`; break;
+                case 'ristorante': endpoint = `/ricerca/ristorante?q=${encodeURIComponent(query)}`; break;
+                case 'luogo': endpoint = `/ricerca/luogo?q=${encodeURIComponent(query)}`; break;
+                case 'allergene': endpoint = `/ricerca/allergene?q=${encodeURIComponent(query)}`; break;
+                case 'piatto_ristorante': endpoint = `/ricerca/piatto-ristorante?q=${encodeURIComponent(query)}`; break;
             }
 
             try {
@@ -142,28 +149,21 @@
             }
         }
 
-        // --- FUNZIONE UNIVERSALE ESTRAZIONE INGREDIENTI ---
         function getIngredienti(piatto) {
-            // 1. Caso JSON importato (meals1.json): campo 'ingredients' è un ARRAY
             if (piatto.ingredients && Array.isArray(piatto.ingredients)) {
                 return piatto.ingredients.join(', ');
             }
-
-            // 2. Caso Inserimento Manuale Ristoratore: campo 'ingredienti' è una STRINGA
             if (piatto.ingredienti && typeof piatto.ingredienti === 'string') {
                 const ing = piatto.ingredienti.trim();
                 if (ing === "" || ing === "Ingredienti standard") return ""; 
                 return ing;
             }
-
-            // 3. Caso Legacy (TheMealDB standard API): campi strIngredient1, strIngredient2...
             let lista = [];
             for (let i = 1; i <= 20; i++) {
                 const ing = piatto[`strIngredient${i}`];
                 if (ing && ing.trim()) lista.push(ing);
             }
             if (lista.length > 0) return lista.join(', ');
-
             return "Ingredienti non disponibili";
         }
 
@@ -177,7 +177,7 @@
             dati.forEach(item => {
                 if (tipo === 'piatto_ristorante') {
                     renderCardRistorantePiatto(item, container);
-                } else if (item.tipo === 'ristorante' || item.nomeRistorante) { 
+                } else if (item.tipo === 'ristorante' || (item.nomeRistorante && !item.prezzo)) { 
                     renderCardRistorante(item, container);
                 } else { 
                     renderCardPiatto(item, container);
@@ -193,8 +193,6 @@
             const nome = piatto.nome || piatto.strMeal;
             const rId = piatto.ristoranteId || '';
             const ristNome = piatto.ristoranteNome || 'Sconosciuto';
-            
-            // Utilizzo la funzione corretta per gli ingredienti
             const testoIngredienti = getIngredienti(piatto);
 
             col.innerHTML = `
@@ -203,11 +201,9 @@
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">${nome}</h5>
                         <p class="text-muted small mb-1">🏠 ${ristNome}</p>
-                        
                         <p class="text-muted small text-truncate" title="${testoIngredienti}">
                             <i class="bi bi-basket"></i> ${testoIngredienti}
                         </p>
-
                         <div class="mt-auto d-flex justify-content-between align-items-center">
                             <span class="fw-bold text-primary">€${piatto.prezzo || 'N/D'}</span>
                             <button class="btn btn-sm btn-outline-success" 
@@ -225,7 +221,8 @@
             col.className = 'col-md-6';
             let menuHtml = '';
             if(ristorante.piattiMenu && ristorante.piattiMenu.length > 0) {
-                menuHtml = `<hr><small class="text-muted">Menu: ${ristorante.piattiMenu.map(p => p.nome || p.strMeal).slice(0,3).join(', ')}...</small>`;
+                const anteprima = ristorante.piattiMenu.map(p => p.nome || p.strMeal).slice(0,3).join(', ');
+                menuHtml = `<hr><small class="text-muted">Menu: ${anteprima}...</small>`;
             }
 
             col.innerHTML = `

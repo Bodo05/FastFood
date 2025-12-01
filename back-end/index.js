@@ -39,255 +39,26 @@ async function getCoordinates(address) {
         if (res.data && res.data.length > 0) {
             return { lat: parseFloat(res.data[0].lat), lon: parseFloat(res.data[0].lon) };
         }
-    } catch (e) { 
-        console.error("Errore Geocoding:", e.message); 
-    }
+    } catch (e) { console.error(e.message); }
     return null;
 }
 
 function calcolaDistanza(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Raggio della Terra in km
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
               Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
               Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// UTENTI
+// ---------------------------------------------------------
+// API DI RICERCA (SEPARATE)
+// ---------------------------------------------------------
 
-app.post('/auth/login', async (req, res) => {
-    const { email, password, type } = req.body;
-    const collection = type === 'ristoratore' ? 'ristoratori' : 'clienti';
-    try {
-        const user = await db.collection(collection).findOne({ email, password });
-        if (!user) return res.status(401).json({ message: 'Credenziali errate' });
-        res.json({ _id: user._id, type });
-    } catch (err) { 
-        res.status(500).json({ message: 'Errore interno del server' }); 
-    }
-});
-
-app.post('/cliente', async (req, res) => {
-    try {
-        const { nome, cognome, email, password, preferenze } = req.body;
-        const exists = await db.collection('clienti').findOne({ email });
-        if (exists) return res.status(400).json({ message: 'Email già registrata' });
-
-        const result = await db.collection('clienti').insertOne({
-            nome, cognome, email, password, preferenze: preferenze || [], createdAt: new Date()
-        });
-        res.json({ _id: result.insertedId });
-    } catch (err) { 
-        res.status(500).json({ message: 'Errore interno del server' }); 
-    }
-});
-
-app.post('/cliente/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const user = await db.collection('clienti').findOne({ email, password });
-        if (!user) return res.status(401).json({ message: 'Credenziali errate' });
-        res.json({ _id: user._id });
-    } catch (err) {
-        res.status(500).json({ message: 'Errore server' });
-    }
-});
-
-app.get('/cliente/:id', async (req, res) => {
-    try {
-        const user = await db.collection('clienti').findOne({ _id: toObjectId(req.params.id) });
-        res.json(user || {});
-    } catch (err) {
-        res.status(500).json({ message: 'Errore server' });
-    }
-});
-
-app.put('/cliente/:id', async (req, res) => {
-    try {
-        const { nome, cognome, preferenze } = req.body;
-        await db.collection('clienti').updateOne(
-            { _id: toObjectId(req.params.id) },
-            { $set: { nome, cognome, preferenze } }
-        );
-        res.json({ message: 'Aggiornato' });
-    } catch (err) {
-        res.status(500).json({ message: 'Errore server' });
-    }
-});
-
-app.delete('/cliente/:id', async (req, res) => {
-    try {
-        await db.collection('clienti').deleteOne({ _id: toObjectId(req.params.id) });
-        res.json({ message: 'Eliminato' });
-    } catch (err) {
-        res.status(500).json({ message: 'Errore server' });
-    }
-});
-
-// RISTORATORI
-
-app.post('/ristoratore', async (req, res) => {
-    try {
-        const { nomeRistorante, piva, telefono, indirizzo, email, password, piatti } = req.body;
-        
-        if (await db.collection('ristoratori').findOne({ email })) {
-            return res.status(400).json({ message: 'Email già registrata' });
-        }
-
-        const coords = await getCoordinates(indirizzo);
-        
-        const nuovoRistoratore = { 
-            nomeRistorante, piva, telefono, indirizzo, 
-            lat: coords ? coords.lat : null, 
-            lon: coords ? coords.lon : null,
-            email, password, piatti: [], createdAt: new Date() 
-        };
-
-        const result = await db.collection('ristoratori').insertOne(nuovoRistoratore);
-        const rId = result.insertedId;
-
-        if (piatti && piatti.length > 0) {
-            const piattiGlobali = piatti.map(p => ({
-                ...p, ristoranteId: rId, ristoranteNome: nomeRistorante, 
-                indirizzoRistorante: indirizzo, createdAt: new Date()
-            }));
-            
-            await db.collection('piatti').insertMany(piattiGlobali);
-            await db.collection('ristoratori').updateOne({ _id: rId }, { $set: { piatti: piattiGlobali } });
-        }
-
-        res.json({ _id: rId });
-    } catch (err) { 
-        res.status(500).json({ message: 'Errore durante la registrazione' }); 
-    }
-});
-
-app.post('/ristoratore/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const r = await db.collection('ristoratori').findOne({ email, password });
-        if (!r) return res.status(401).json({ message: 'Credenziali errate' });
-        res.json({ _id: r._id });
-    } catch (err) {
-        res.status(500).json({ message: 'Errore server' });
-    }
-});
-
-app.get('/ristoratore/:id', async (req, res) => {
-    try {
-        const r = await db.collection('ristoratori').findOne({ _id: toObjectId(req.params.id) });
-        res.json(r || {});
-    } catch (err) {
-        res.status(500).json({ message: 'Errore server' });
-    }
-});
-
-app.get('/ristoratore/:id/piatti', async (req, res) => {
-    try {
-        const piatti = await db.collection('piatti').find({ ristoranteId: toObjectId(req.params.id) }).toArray();
-        res.json(piatti);
-    } catch (e) { res.status(500).json([]); }
-});
-
-app.post('/ristoratore/:id/piatti', async (req, res) => {
-    const { piatto } = req.body;
-    const id = toObjectId(req.params.id);
-    try {
-        const ristorante = await db.collection('ristoratori').findOne({_id: id});
-        if (!ristorante) return res.status(404).json({ message: "Ristorante non trovato" });
-
-        const nuovoPiatto = {
-            ...piatto, ristoranteId: id, ristoranteNome: ristorante.nomeRistorante,
-            indirizzoRistorante: ristorante.indirizzo, createdAt: new Date()
-        };
-
-        const resPiatto = await db.collection('piatti').insertOne(nuovoPiatto);
-        await db.collection('ristoratori').updateOne({_id: id}, { $push: { piatti: { ...piatto, id: resPiatto.insertedId } } });
-        
-        res.json({ message: 'Piatto aggiunto con successo' });
-    } catch (e) { res.status(500).json({ message: 'Errore aggiunta piatto' }); }
-});
-
-app.get('/ristoratore/:id/statistiche', async (req, res) => {
-    const id = toObjectId(req.params.id);
-    try {
-        // 1. Recuperiamo TUTTI gli ordini di questo ristorante
-        const ordini = await db.collection('ordini').find({ 
-            ristoranteId: id 
-        }).toArray();
-
-        const adesso = new Date();
-        let totaleGuadagni = 0;
-        let numeroOrdini = 0;
-        const piattiCount = {};
-
-        // 2. Analizziamo ogni ordine
-        ordini.forEach(o => {
-            // Un ordine è "finito" se ha lo stato 'consegnato' OPPURE se il suo tempo è scaduto
-            const fine = o.orarioFine ? new Date(o.orarioFine) : null;
-            const isFinito = o.stato === 'consegnato' || (fine && adesso >= fine);
-
-            // Calcoliamo le statistiche solo per gli ordini finiti
-            if (isFinito) {
-                totaleGuadagni += (o.totale || 0);
-                numeroOrdini++;
-
-                // Conteggio piatti più venduti
-                if (o.piatti && Array.isArray(o.piatti)) {
-                    o.piatti.forEach(p => {
-                        // Supporta sia il formato vecchio che nuovo
-                        const nome = p.nome || p.strMeal; 
-                        // Se non c'è quantità, assumiamo 1
-                        const qty = p.quantita || 1; 
-                        piattiCount[nome] = (piattiCount[nome] || 0) + qty;
-                    });
-                }
-            }
-        });
-
-        // 3. Creiamo la classifica top 5
-        const classificaPiatti = Object.entries(piattiCount)
-            .sort(([,a], [,b]) => b - a) // Ordina decrescente
-            .slice(0, 5) // Prendi i primi 5
-            .map(([nome, quantita]) => ({ nome, quantita }));
-
-        res.json({ 
-            totaleGuadagni, 
-            numeroOrdini, 
-            classificaPiatti 
-        });
-
-    } catch (e) { 
-        res.status(500).json({ message: 'Errore statistiche' }); 
-    }
-});
-// CATALOGO E RICERCA
-
-app.get('/catalog', async (req, res) => {
-    try {
-        const catalog = await db.collection('catalog').find({}).toArray();
-        res.json(catalog);
-    } catch (e) { res.status(500).json({ message: 'Errore recupero catalogo' }); }
-});
-
-app.get('/categorie-catalogo', async (req, res) => {
-    try {
-        const cats = await db.collection('catalog').distinct('strCategory');
-        res.json(cats.filter(c => c));
-    } catch (e) { res.status(500).json([]); }
-});
-
-app.get('/meals', async (req, res) => {
-    try {
-        const meals = await db.collection('piatti').find({ ristoranteId: { $ne: null } }).limit(100).toArray();
-        res.json(meals);
-    } catch (e) { res.status(500).json([]); }
-});
-
-app.get('/ricerca', async (req, res) => {
+// 1. Ricerca Generale (Tutto)
+app.get('/ricerca/generale', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
     const regex = new RegExp(q, 'i');
@@ -303,47 +74,65 @@ app.get('/ricerca', async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
-app.get('/ricerca-avanzata', async (req, res) => {
-    const { q, tipo, categoria, ingrediente, allergene, prezzoMin, prezzoMax, ristorante, luogo } = req.query;
+// 2. Ricerca per Ingrediente
+app.get('/ricerca/ingrediente', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.json([]);
     try {
-        if (tipo === 'ristorante') {
-            const query = {};
-            if (q) query.nomeRistorante = new RegExp(q, 'i');
-            if (luogo) query.indirizzo = new RegExp(luogo, 'i');
-            
-            const results = await db.collection('ristoratori').aggregate([
-                { $match: query },
-                { $lookup: { from: 'piatti', localField: '_id', foreignField: 'ristoranteId', as: 'piattiMenu' } }
-            ]).toArray();
-            return res.json(results);
-        } 
-        
-        const query = { ristoranteId: { $ne: null } };
-        if (q) query.$or = [{ nome: new RegExp(q, 'i') }, { categoria: new RegExp(q, 'i') }];
-        if (categoria) query.categoria = new RegExp(categoria, 'i');
-        if (ingrediente) query.ingredienti = new RegExp(ingrediente, 'i');
-        if (ristorante) query.ristoranteNome = new RegExp(ristorante, 'i');
-        if (luogo) query.indirizzoRistorante = new RegExp(luogo, 'i');
-        
-        if (prezzoMin || prezzoMax) {
-            query.prezzo = {};
-            if (prezzoMin) query.prezzo.$gte = parseFloat(prezzoMin);
-            if (prezzoMax) query.prezzo.$lte = parseFloat(prezzoMax);
-        }
-        if (allergene) {
-            query.ingredienti = { $not: new RegExp(allergene, 'i') };
-        }
-        const results = await db.collection('piatti').find(query).toArray();
+        const results = await db.collection('piatti').find({
+            ristoranteId: { $ne: null },
+            ingredienti: new RegExp(q, 'i')
+        }).toArray();
         res.json(results);
     } catch (e) { res.status(500).json([]); }
 });
 
-app.get('/ricerca-ristorante-per-piatto', async (req, res) => {
+// 3. Ricerca per Ristorante (Nome)
+app.get('/ricerca/ristorante', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.json([]);
     try {
-        const { piatto } = req.query;
-        const regex = new RegExp(piatto, 'i');
+        const results = await db.collection('ristoratori').aggregate([
+            { $match: { nomeRistorante: new RegExp(q, 'i') } },
+            { $lookup: { from: 'piatti', localField: '_id', foreignField: 'ristoranteId', as: 'piattiMenu' } }
+        ]).toArray();
+        res.json(results);
+    } catch (e) { res.status(500).json([]); }
+});
+
+// 4. Ricerca per Luogo
+app.get('/ricerca/luogo', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    try {
+        const results = await db.collection('ristoratori').aggregate([
+            { $match: { indirizzo: new RegExp(q, 'i') } },
+            { $lookup: { from: 'piatti', localField: '_id', foreignField: 'ristoranteId', as: 'piattiMenu' } }
+        ]).toArray();
+        res.json(results);
+    } catch (e) { res.status(500).json([]); }
+});
+
+// 5. Ricerca Escludendo Allergene
+app.get('/ricerca/allergene', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    try {
+        const results = await db.collection('piatti').find({
+            ristoranteId: { $ne: null },
+            ingredienti: { $not: new RegExp(q, 'i') }
+        }).toArray();
+        res.json(results);
+    } catch (e) { res.status(500).json([]); }
+});
+
+// 6. Ricerca Ristorante per Piatto Specifico
+app.get('/ricerca/piatto-ristorante', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    try {
         const risultati = await db.collection('piatti').aggregate([
-            { $match: { nome: regex, ristoranteId: { $ne: null } } },
+            { $match: { nome: new RegExp(q, 'i'), ristoranteId: { $ne: null } } },
             { 
                 $group: { 
                     _id: "$ristoranteId", 
@@ -359,79 +148,168 @@ app.get('/ricerca-ristorante-per-piatto', async (req, res) => {
             }
         ]).toArray();
         res.json(risultati);
-    } catch (err) { res.status(500).json({ message: 'Errore ricerca' }); }
+    } catch (err) { res.status(500).json([]); }
 });
 
-// ORDINI - SCHEDULER
+// ---------------------------------------------------------
+// ALTRE ROTTE (Auth, Ordini, Cataloghi)
+// ---------------------------------------------------------
+
+app.post('/auth/login', async (req, res) => {
+    const { email, password, type } = req.body;
+    const collection = type === 'ristoratore' ? 'ristoratori' : 'clienti';
+    try {
+        const user = await db.collection(collection).findOne({ email, password });
+        if (!user) return res.status(401).json({ message: 'Credenziali errate' });
+        res.json({ _id: user._id, type });
+    } catch (err) { res.status(500).json({ message: 'Errore server' }); }
+});
+
+app.post('/cliente', async (req, res) => {
+    try {
+        const { nome, cognome, email, password, preferenze } = req.body;
+        if (await db.collection('clienti').findOne({ email })) return res.status(400).json({ message: 'Email usata' });
+        const result = await db.collection('clienti').insertOne({ nome, cognome, email, password, preferenze: preferenze || [], createdAt: new Date() });
+        res.json({ _id: result.insertedId });
+    } catch (err) { res.status(500).json({ message: 'Errore server' }); }
+});
+
+app.post('/cliente/login', async (req, res) => {
+    try {
+        const user = await db.collection('clienti').findOne({ email: req.body.email, password: req.body.password });
+        if (!user) return res.status(401).json({ message: 'Errato' });
+        res.json({ _id: user._id });
+    } catch (e) { res.status(500).json({}); }
+});
+
+app.get('/cliente/:id', async (req, res) => {
+    try { res.json(await db.collection('clienti').findOne({ _id: toObjectId(req.params.id) }) || {}); } catch(e){ res.status(500).json({}); }
+});
+
+app.put('/cliente/:id', async (req, res) => {
+    try {
+        await db.collection('clienti').updateOne({ _id: toObjectId(req.params.id) }, { $set: req.body });
+        res.json({ message: 'Ok' });
+    } catch (e) { res.status(500).json({}); }
+});
+
+app.delete('/cliente/:id', async (req, res) => {
+    await db.collection('clienti').deleteOne({ _id: toObjectId(req.params.id) });
+    res.json({ message: 'Deleted' });
+});
+
+app.post('/ristoratore', async (req, res) => {
+    try {
+        const { nomeRistorante, piva, telefono, indirizzo, email, password, piatti } = req.body;
+        if (await db.collection('ristoratori').findOne({ email })) return res.status(400).json({ message: 'Email usata' });
+        
+        const coords = await getCoordinates(indirizzo);
+        const nuovo = { nomeRistorante, piva, telefono, indirizzo, lat: coords?.lat, lon: coords?.lon, email, password, piatti: [], createdAt: new Date() };
+        const result = await db.collection('ristoratori').insertOne(nuovo);
+        
+        if (piatti && piatti.length > 0) {
+            const globali = piatti.map(p => ({...p, ristoranteId: result.insertedId, ristoranteNome: nomeRistorante, indirizzoRistorante: indirizzo }));
+            await db.collection('piatti').insertMany(globali);
+            await db.collection('ristoratori').updateOne({ _id: result.insertedId }, { $set: { piatti: globali } });
+        }
+        res.json({ _id: result.insertedId });
+    } catch (e) { res.status(500).json({ message: 'Errore' }); }
+});
+
+app.post('/ristoratore/login', async (req, res) => {
+    try {
+        const r = await db.collection('ristoratori').findOne({ email: req.body.email, password: req.body.password });
+        if (!r) return res.status(401).json({ message: 'Errato' });
+        res.json({ _id: r._id });
+    } catch(e) { res.status(500).json({}); }
+});
+
+app.get('/ristoratore/:id', async (req, res) => {
+    try { res.json(await db.collection('ristoratori').findOne({ _id: toObjectId(req.params.id) }) || {}); } catch(e) { res.status(500).json({}); }
+});
+
+app.put('/ristoratore/:id', async (req, res) => {
+    try {
+        const { indirizzo } = req.body;
+        let update = { ...req.body };
+        if(indirizzo) {
+            const coords = await getCoordinates(indirizzo);
+            if(coords) { update.lat = coords.lat; update.lon = coords.lon; }
+        }
+        await db.collection('ristoratori').updateOne({ _id: toObjectId(req.params.id) }, { $set: update });
+        res.json({ message: 'Ok' });
+    } catch(e) { res.status(500).json({}); }
+});
+
+app.get('/ristoratore/:id/piatti', async (req, res) => {
+    try { res.json(await db.collection('piatti').find({ ristoranteId: toObjectId(req.params.id) }).toArray()); } catch(e) { res.status(500).json([]); }
+});
+
+app.post('/ristoratore/:id/piatti', async (req, res) => {
+    const id = toObjectId(req.params.id);
+    const { piatto } = req.body;
+    try {
+        const rist = await db.collection('ristoratori').findOne({_id: id});
+        if(!rist) return res.status(404).json({});
+        const p = { ...piatto, ristoranteId: id, ristoranteNome: rist.nomeRistorante, indirizzoRistorante: rist.indirizzo, createdAt: new Date() };
+        const ins = await db.collection('piatti').insertOne(p);
+        await db.collection('ristoratori').updateOne({_id: id}, { $push: { piatti: {...piatto, id: ins.insertedId} }});
+        res.json({message:'Ok'});
+    } catch(e) { res.status(500).json({}); }
+});
+
+app.get('/meals', async (req, res) => {
+    try {
+        const meals = await db.collection('piatti').find({ ristoranteId: { $ne: null } }).limit(100).toArray();
+        res.json(meals);
+    } catch (e) { res.status(500).json([]); }
+});
+
+app.get('/catalog', async (req, res) => {
+    try { res.json(await db.collection('catalog').find({}).toArray()); } catch(e) { res.status(500).json([]); }
+});
+
+app.get('/categorie-catalogo', async (req, res) => {
+    try {
+        const cats = await db.collection('catalog').distinct('strCategory');
+        res.json(cats.filter(c => c));
+    } catch (e) { res.status(500).json([]); }
+});
 
 app.post('/ordine', async (req, res) => {
-    const { clienteId, ristoranteId, piatti, totale, tipoConsegna, indirizzoConsegna, costoConsegna } = req.body;
+    const { clienteId, ristoranteId, piatti, totale, tipoConsegna, indirizzoConsegna } = req.body;
     const rId = toObjectId(ristoranteId);
 
     try {
-        // 1. Tempo di Preparazione (Cottura)
         let minutiTotali = Math.max(...piatti.map(p => parseInt(p.tempo) || 15));
-
-        // 2. Tempo di Consegna (Solo se a domicilio)
+        
         if (tipoConsegna === 'domicilio' && indirizzoConsegna) {
-            // Recupera coordinate Ristorante
-            const ristorante = await db.collection('ristoratori').findOne({ _id: rId });
-            
-            // Recupera coordinate Cliente
-            const coordsCliente = await getCoordinates(indirizzoConsegna);
-
-            if (ristorante && ristorante.lat && ristorante.lon && coordsCliente) {
-                const distKm = calcolaDistanza(ristorante.lat, ristorante.lon, coordsCliente.lat, coordsCliente.lon);
-                
-                // STIMA: 5 minuti per ogni Km di distanza
-                const minutiViaggio = Math.ceil(distKm * 5);
-                minutiTotali += minutiViaggio;
-            } else {
-                // Fallback se non trova le coordinate: aggiungi 15 min fissi
-                minutiTotali += 15; 
-            }
+            const rist = await db.collection('ristoratori').findOne({ _id: rId });
+            const coordsC = await getCoordinates(indirizzoConsegna);
+            if (rist?.lat && coordsC) {
+                minutiTotali += Math.ceil(calcolaDistanza(rist.lat, rist.lon, coordsC.lat, coordsC.lon) * 5);
+            } else minutiTotali += 15;
         }
 
-        // --- DEMO MODE (1 minuto reale = 1 secondo di attesa) ---
         const durataMs = minutiTotali * 1000; 
-
-        // 3. Calcolo Orari (Scheduler)
-        const ristoranteDoc = await db.collection('ristoratori').findOne({ _id: rId });
+        const ristData = await db.collection('ristoratori').findOne({ _id: rId });
+        
         const adesso = new Date();
         let orarioInizio = adesso;
-
-        if (ristoranteDoc.prossimoSlotLibero && new Date(ristoranteDoc.prossimoSlotLibero) > adesso) {
-            orarioInizio = new Date(ristoranteDoc.prossimoSlotLibero);
+        if (ristData.prossimoSlotLibero && new Date(ristData.prossimoSlotLibero) > adesso) {
+            orarioInizio = new Date(ristData.prossimoSlotLibero);
         }
-
         const orarioFine = new Date(orarioInizio.getTime() + durataMs);
 
-        // 4. Aggiorna Ristorante e Salva Ordine
-        await db.collection('ristoratori').updateOne(
-            { _id: rId },
-            { $set: { prossimoSlotLibero: orarioFine } }
-        );
+        await db.collection('ristoratori').updateOne({ _id: rId }, { $set: { prossimoSlotLibero: orarioFine } });
 
         const ordine = {
-            clienteId: toObjectId(clienteId),
-            ristoranteId: rId,
-            piatti, 
-            totale: parseFloat(totale), 
-            costoConsegna: parseFloat(costoConsegna || 0),
-            tipoConsegna, 
-            indirizzoConsegna, 
-            orarioInizio, 
-            orarioFine,
-            dataCreazione: adesso
+            clienteId: toObjectId(clienteId), ristoranteId: rId, piatti, totale: parseFloat(totale), 
+            tipoConsegna, indirizzoConsegna, orarioInizio, orarioFine, dataCreazione: adesso, stato: 'in_coda'
         };
-
         const result = await db.collection('ordini').insertOne(ordine);
-        res.json({ _id: result.insertedId, orarioInizio, orarioFine, minutiTotali });
-
-    } catch (e) { 
-        console.error(e);
-        res.status(500).json({ message: 'Errore creazione ordine' }); 
-    }
+        res.json({ _id: result.insertedId, orarioInizio, orarioFine });
+    } catch(e) { res.status(500).json({}); }
 });
 
 app.get('/ristoratore/:id/ordini', async (req, res) => {
@@ -443,46 +321,57 @@ app.get('/ristoratore/:id/ordini', async (req, res) => {
             { $unwind: '$clienteInfo' }
         ]).toArray();
 
-        const adesso = new Date();
-        const ordiniProcessati = ordiniRaw.map(ordine => {
-            let statoCalcolato = 'ordinato'; 
-            const inizio = new Date(ordine.orarioInizio);
-            const fine = new Date(ordine.orarioFine);
-
-            if (adesso >= fine) {
-                statoCalcolato = 'consegnato'; 
-            } else if (adesso >= inizio && adesso < fine) {
-                statoCalcolato = 'in_preparazione';
-            } else {
-                statoCalcolato = 'in_coda'; 
-            }
-            return { ...ordine, stato: statoCalcolato };
+        const now = new Date();
+        const proc = ordiniRaw.map(o => {
+            const fine = new Date(o.orarioFine);
+            let st = 'in_coda';
+            if(now >= fine) st = 'consegnato';
+            else if(now >= new Date(o.orarioInizio)) st = 'in_preparazione';
+            return { ...o, stato: st };
         });
-
-        res.json(ordiniProcessati);
-    } catch (e) { res.status(500).json([]); }
+        res.json(proc);
+    } catch(e) { res.status(500).json([]); }
 });
 
 app.get('/cliente/:id/ordini', async (req, res) => {
     try {
-        const ordiniRaw = await db.collection('ordini').find({ clienteId: toObjectId(req.params.id) }).sort({ dataCreazione: -1 }).toArray();
-        
-        const adesso = new Date();
-        const ordiniProcessati = [];
-
-        for (let ordine of ordiniRaw) {
-            const rist = await db.collection('ristoratori').findOne({ _id: ordine.ristoranteId });
-            const nomeRist = rist ? rist.nomeRistorante : "Ristorante";
-
-            let statoCalcolato = 'in_coda';
-            const inizio = new Date(ordine.orarioInizio);
-            const fine = new Date(ordine.orarioFine);
-
-            if (adesso >= fine) statoCalcolato = 'consegnato';
-            else if (adesso >= inizio) statoCalcolato = 'in_preparazione';
-            
-            ordiniProcessati.push({ ...ordine, stato: statoCalcolato, ristoranteNome: nomeRist });
+        const ordiniRaw = await db.collection('ordini').find({ clienteId: toObjectId(req.params.id) }).sort({dataCreazione:-1}).toArray();
+        const now = new Date();
+        const out = [];
+        for(let o of ordiniRaw) {
+            const r = await db.collection('ristoratori').findOne({_id: o.ristoranteId});
+            let st = 'in_coda';
+            if(now >= new Date(o.orarioFine)) st = 'consegnato';
+            else if(now >= new Date(o.orarioInizio)) st = 'in_preparazione';
+            out.push({ ...o, stato: st, ristoranteNome: r ? r.nomeRistorante : 'Ristorante' });
         }
-        res.json(ordiniProcessati);
-    } catch (e) { res.status(500).json([]); }
+        res.json(out);
+    } catch(e) { res.status(500).json([]); }
+});
+
+app.get('/ristoratore/:id/statistiche', async (req, res) => {
+    try {
+        const ordini = await db.collection('ordini').find({ ristoranteId: toObjectId(req.params.id) }).toArray();
+        const now = new Date();
+        let tot = 0, num = 0, pMap = {};
+
+        ordini.forEach(o => {
+            if (o.stato === 'consegnato' || (o.orarioFine && now >= new Date(o.orarioFine))) {
+                tot += (o.totale || 0); num++;
+                if(o.piatti) o.piatti.forEach(p => { 
+                    const nm = p.nome || p.strMeal;
+                    pMap[nm] = (pMap[nm] || 0) + (p.quantita || 1); 
+                });
+            }
+        });
+        
+        const classifica = Object.entries(pMap).sort(([,a], [,b]) => b - a).slice(0, 5).map(([n, q]) => ({ nome: n, quantita: q }));
+        res.json({ totaleGuadagni: tot, numeroOrdini: num, classificaPiatti: classifica });
+    } catch(e) { res.status(500).json({}); }
+});
+
+app.post('/utils/geocode', async (req, res) => {
+    const coords = await getCoordinates(req.body.indirizzo);
+    if(coords) res.json(coords);
+    else res.status(404).json({});
 });

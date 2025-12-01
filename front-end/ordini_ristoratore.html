@@ -89,6 +89,9 @@
                     `<li>${p.nome || p.strMeal} <span class="text-muted">(${p.tempo || 15}m)</span></li>`
                 ).join('');
 
+                // QUI MOSTRIAMO IL TOTALE PAGATO
+                const totaleOrdine = o.totale ? parseFloat(o.totale).toFixed(2) : "0.00";
+
                 html += `
                 <div class="col-md-4">
                     <div class="card shadow-sm h-100 border-0">
@@ -98,6 +101,12 @@
                         </div>
                         <div class="card-body">
                             <h5 class="card-title">${o.clienteInfo.nome}</h5>
+                            
+                            <div class="alert alert-success py-2 d-flex justify-content-between align-items-center">
+                                <span>Totale:</span>
+                                <span class="fw-bold fs-5">€${totaleOrdine}</span>
+                            </div>
+
                             <div class="d-flex justify-content-between small text-muted mb-2">
                                 <span>Inizio: <strong>${inizio}</strong></span>
                                 <span>Fine: <strong>${fine}</strong></span>
