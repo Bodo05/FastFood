@@ -53,11 +53,35 @@ function calcolaDistanza(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+// --- FUNZIONE HELPER CALCOLO COSTI/TEMPI ---
+async function calcolaDettagliOrdine(piatti, tipoConsegna, indirizzoConsegna, rId) {
+    let tempoPreparazione = Math.max(...piatti.map(p => parseInt(p.tempo) || 15));
+    let tempoViaggio = 0;
+    let costoConsegna = 0;
+    let distKm = 0;
+
+    if (tipoConsegna === 'domicilio' && indirizzoConsegna) {
+        const rist = await db.collection('ristoratori').findOne({ _id: toObjectId(rId) });
+        const coordsC = await getCoordinates(indirizzoConsegna);
+        
+        if (rist?.lat && coordsC) {
+            const distLinea = calcolaDistanza(rist.lat, rist.lon, coordsC.lat, coordsC.lon);
+            distKm = distLinea * 1.4; // Fattore tortuosità strada
+            tempoViaggio = Math.ceil(distKm * 2) + 5; // 2 min/km + 5 min fissi
+            costoConsegna = Math.max(2, Math.round(distKm * 1)); // 1€/km, min 2€
+        } else {
+            tempoViaggio = 15; // Fallback
+            costoConsegna = 5;
+        }
+    }
+
+    return { tempoPreparazione, tempoViaggio, costoConsegna, distKm };
+}
+
 // ---------------------------------------------------------
-// API DI RICERCA (SEPARATE)
+// API DI RICERCA (SPECIFICHE)
 // ---------------------------------------------------------
 
-// 1. Ricerca Generale (Tutto)
 app.get('/ricerca/generale', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
@@ -74,7 +98,6 @@ app.get('/ricerca/generale', async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
-// 2. Ricerca per Ingrediente
 app.get('/ricerca/ingrediente', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
@@ -87,7 +110,6 @@ app.get('/ricerca/ingrediente', async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
-// 3. Ricerca per Ristorante (Nome)
 app.get('/ricerca/ristorante', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
@@ -100,7 +122,6 @@ app.get('/ricerca/ristorante', async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
-// 4. Ricerca per Luogo
 app.get('/ricerca/luogo', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
@@ -113,7 +134,6 @@ app.get('/ricerca/luogo', async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
-// 5. Ricerca Escludendo Allergene
 app.get('/ricerca/allergene', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
@@ -126,7 +146,6 @@ app.get('/ricerca/allergene', async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
-// 6. Ricerca Ristorante per Piatto Specifico
 app.get('/ricerca/piatto-ristorante', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
@@ -152,7 +171,7 @@ app.get('/ricerca/piatto-ristorante', async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// ALTRE ROTTE (Auth, Ordini, Cataloghi)
+// AUTH E UTENTI
 // ---------------------------------------------------------
 
 app.post('/auth/login', async (req, res) => {
@@ -197,6 +216,10 @@ app.delete('/cliente/:id', async (req, res) => {
     await db.collection('clienti').deleteOne({ _id: toObjectId(req.params.id) });
     res.json({ message: 'Deleted' });
 });
+
+// ---------------------------------------------------------
+// RISTORATORI
+// ---------------------------------------------------------
 
 app.post('/ristoratore', async (req, res) => {
     try {
@@ -258,6 +281,10 @@ app.post('/ristoratore/:id/piatti', async (req, res) => {
     } catch(e) { res.status(500).json({}); }
 });
 
+// ---------------------------------------------------------
+// CATALOGHI
+// ---------------------------------------------------------
+
 app.get('/meals', async (req, res) => {
     try {
         const meals = await db.collection('piatti').find({ ristoranteId: { $ne: null } }).limit(100).toArray();
@@ -276,43 +303,36 @@ app.get('/categorie-catalogo', async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
+// ---------------------------------------------------------
+// ORDINI E SCHEDULER (CON PREVENTIVO)
+// ---------------------------------------------------------
+
+app.post('/ordine/preventivo', async (req, res) => {
+    const { piatti, tipoConsegna, indirizzoConsegna, ristoranteId } = req.body;
+    try {
+        const dettagli = await calcolaDettagliOrdine(piatti, tipoConsegna, indirizzoConsegna, ristoranteId);
+        res.json(dettagli);
+    } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/ordine', async (req, res) => {
     const { clienteId, ristoranteId, piatti, totale, tipoConsegna, indirizzoConsegna } = req.body;
     const rId = toObjectId(ristoranteId);
 
     try {
-        let minutiTotali = Math.max(...piatti.map(p => parseInt(p.tempo) || 15));
-        let costoConsegnaCalcolato = 0;
-        let totaleFinale = parseFloat(totale); // Totale parziale degli articoli
-
-        if (tipoConsegna === 'domicilio' && indirizzoConsegna) {
-            const rist = await db.collection('ristoratori').findOne({ _id: rId });
-            const coordsC = await getCoordinates(indirizzoConsegna);
-            
-            if (rist?.lat && coordsC) {
-                const distKm = calcolaDistanza(rist.lat, rist.lon, coordsC.lat, coordsC.lon);
-                
-                // 1. Calcolo Tempo (5 min al km)
-                minutiTotali += Math.ceil(distKm * 5);
-
-                // 2. Calcolo Costo (1€ al km, minimo 2€)
-                costoConsegnaCalcolato = Math.max(2, Math.round(distKm * 1)); 
-            } else {
-                // Fallback se non trova coordinate
-                minutiTotali += 15;
-                costoConsegnaCalcolato = 5; // Costo fisso di default
-            }
-        }
-
-        // Aggiungo il costo di consegna al totale
-        totaleFinale += costoConsegnaCalcolato;
-
-        // --- Scheduler & Salvataggio ---
-        const durataMs = minutiTotali * 1000; 
-        const ristData = await db.collection('ristoratori').findOne({ _id: rId });
+        // Ricalcoliamo lato server
+        const dettagli = await calcolaDettagliOrdine(piatti, tipoConsegna, indirizzoConsegna, rId);
         
+        const minutiTotali = dettagli.tempoPreparazione + dettagli.tempoViaggio;
+        const durataMs = minutiTotali * 1000; // DEMO (1min = 1sec)
+
+        let totalePiatti = parseFloat(totale); 
+        let totaleFinale = totalePiatti + dettagli.costoConsegna;
+
+        const ristData = await db.collection('ristoratori').findOne({ _id: rId });
         const adesso = new Date();
         let orarioInizio = adesso;
+        
         if (ristData.prossimoSlotLibero && new Date(ristData.prossimoSlotLibero) > adesso) {
             orarioInizio = new Date(ristData.prossimoSlotLibero);
         }
@@ -321,34 +341,19 @@ app.post('/ordine', async (req, res) => {
         await db.collection('ristoratori').updateOne({ _id: rId }, { $set: { prossimoSlotLibero: orarioFine } });
 
         const ordine = {
-            clienteId: toObjectId(clienteId), 
-            ristoranteId: rId, 
-            piatti, 
-            totale: totaleFinale, // Salvo il totale maggiorato
-            costoConsegna: costoConsegnaCalcolato, // Salvo anche il costo specifico
-            tipoConsegna, 
-            indirizzoConsegna, 
-            orarioInizio, 
-            orarioFine, 
-            dataCreazione: adesso, 
-            stato: 'in_coda'
+            clienteId: toObjectId(clienteId), ristoranteId: rId, piatti, 
+            totale: totaleFinale, 
+            costoConsegna: dettagli.costoConsegna,
+            tempoPreparazione: dettagli.tempoPreparazione,
+            tempoViaggio: dettagli.tempoViaggio,
+            tipoConsegna, indirizzoConsegna, 
+            orarioInizio, orarioFine, dataCreazione: adesso, stato: 'in_coda'
         };
         
         const result = await db.collection('ordini').insertOne(ordine);
-        
-        // Restituisco al frontend i dati aggiornati
-        res.json({ 
-            _id: result.insertedId, 
-            orarioInizio, 
-            orarioFine, 
-            totaleFinale,        // Fondamentale per l'alert
-            costoConsegnaCalcolato 
-        });
+        res.json({ _id: result.insertedId, ...dettagli, orarioInizio, orarioFine, totaleFinale });
 
-    } catch(e) { 
-        console.error(e);
-        res.status(500).json({ message: 'Errore creazione ordine' }); 
-    }
+    } catch(e) { res.status(500).json({}); }
 });
 
 app.get('/ristoratore/:id/ordini', async (req, res) => {

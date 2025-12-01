@@ -2,182 +2,139 @@ let carrello = JSON.parse(localStorage.getItem("carrello")) || [];
 const CLIENT_ID = localStorage.getItem('_id');
 
 window.onload = () => {
-    if (!CLIENT_ID) {
-        alert("Devi effettuare il login.");
-        window.location.href = 'login.html';
-        return;
-    }
+    if (!CLIENT_ID) { alert("Login richiesto"); location.href='login.html'; return; }
     aggiornaCarrello();
 };
 
 function aggiornaCarrello() {
     const container = document.getElementById("carrelloContainer");
-    const totaleElement = document.getElementById("totale");
-    const azioniDiv = document.getElementById("azioniCarrello");
-    const checkoutDiv = document.getElementById("checkoutSection");
-    
+    const totaleEl = document.getElementById("totale");
+    const checkoutEl = document.getElementById("checkoutSection");
+    const azioniEl = document.getElementById("azioniCarrello");
+
     container.innerHTML = "";
-    
     if (carrello.length === 0) {
-        container.innerHTML = '<div class="alert alert-warning text-center">Il carrello è vuoto. <a href="cliente.html">Torna al menu</a></div>';
-        if(totaleElement) totaleElement.innerText = "0.00";
-        if(azioniDiv) azioniDiv.style.display = 'none';
-        if(checkoutDiv) checkoutDiv.style.display = 'none';
+        container.innerHTML = '<div class="alert alert-warning text-center">Carrello vuoto.</div>';
+        if(checkoutEl) checkoutEl.style.display = 'none';
+        if(azioniEl) azioniEl.style.display = 'none';
         return;
     }
 
-    let totaleCalcolato = 0;
-
-    carrello.forEach((piatto, index) => {
-        const prezzo = parseFloat(piatto.price || piatto.prezzo || 0);
-        const subtotale = prezzo * piatto.quantita;
-        totaleCalcolato += subtotale;
-        
-        const card = document.createElement('div');
-        card.className = 'card mb-3 shadow-sm';
-        card.innerHTML = `
-            <div class="card-body p-3">
+    let totale = 0;
+    carrello.forEach((p, i) => {
+        const sub = (p.price || p.prezzo || 0) * p.quantita;
+        totale += sub;
+        container.innerHTML += `
+            <div class="card mb-2 p-2 shadow-sm">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <img src="${piatto.strMealThumb || piatto.thumb || 'https://via.placeholder.com/50'}" class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;">
-                        <div>
-                            <h6 class="mb-0">${piatto.strMeal || piatto.nome}</h6>
-                            <small class="text-muted">€${prezzo.toFixed(2)} cad.</small>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <button class="btn btn-sm btn-outline-secondary me-2" onclick="modificaQuantita(${index}, -1)">-</button>
-                        <span class="fw-bold mx-2">${piatto.quantita}</span>
-                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="modificaQuantita(${index}, 1)">+</button>
-                        <button class="btn btn-sm btn-danger ms-4" onclick="rimuoviDalCarrello(${index})">&times;</button>
-                    </div>
+                    <div><b>${p.strMeal||p.nome}</b> <span class="text-muted">x${p.quantita}</span></div>
+                    <div class="text-primary fw-bold">€${sub.toFixed(2)}</div>
                 </div>
-                <div class="text-end mt-2 fw-bold text-primary">
-                    Subtotale: €${subtotale.toFixed(2)}
+                <div class="text-end mt-1">
+                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="modifica(${i}, 1)">+</button>
+                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="modifica(${i}, -1)">-</button>
+                    <button class="btn btn-sm btn-danger py-0" onclick="rimuovi(${i})">×</button>
                 </div>
-            </div>
-        `;
-        container.appendChild(card);
+            </div>`;
     });
-    
-    if(totaleElement) totaleElement.innerText = totaleCalcolato.toFixed(2);
-    if(azioniDiv) azioniDiv.style.display = 'block';
+    if(totaleEl) totaleEl.innerText = totale.toFixed(2);
+    if(azioniEl) azioniEl.style.display = 'block';
 }
 
-function modificaQuantita(index, variazione) {
-    carrello[index].quantita += variazione;
-    if (carrello[index].quantita < 1) {
-        rimuoviDalCarrello(index);
-    } else {
-        salvaEaggiorna();
-    }
+function modifica(i, q) {
+    carrello[i].quantita += q;
+    if (carrello[i].quantita < 1) carrello.splice(i, 1);
+    salva();
 }
-
-function rimuoviDalCarrello(index) {
-    if(confirm('Rimuovere questo piatto?')) {
-        carrello.splice(index, 1);
-        salvaEaggiorna();
-    }
-}
-
-function svuotaCarrello() {
-    if(confirm('Svuotare tutto il carrello?')) {
-        carrello = [];
-        salvaEaggiorna();
-    }
-}
-
-function salvaEaggiorna() {
-    localStorage.setItem("carrello", JSON.stringify(carrello));
-    aggiornaCarrello();
-}
-
-// --- FUNZIONI DI CHECKOUT ---
+function rimuovi(i) { carrello.splice(i, 1); salva(); }
+function svuotaCarrello() { carrello = []; salva(); }
+function salva() { localStorage.setItem("carrello", JSON.stringify(carrello)); aggiornaCarrello(); }
 
 function mostraCheckout() {
-    const checkout = document.getElementById('checkoutSection');
-    checkout.style.display = 'block';
-    // Scorrimento fluido verso il basso
-    checkout.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('checkoutSection').style.display = 'block';
+    document.getElementById('checkoutSection').scrollIntoView({behavior:'smooth'});
+    
+    // Se è asporto, non serve l'indirizzo, calcola subito il preventivo
+    const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
+    if(tipo === 'asporto') {
+        calcolaPreventivo();
+    }
 }
 
 function toggleIndirizzo() {
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
-    const divIndirizzo = document.getElementById('divIndirizzo');
-    const inputIndirizzo = document.getElementById('indirizzo');
-    
-    if (tipo === 'domicilio') {
-        divIndirizzo.style.display = 'block';
-        inputIndirizzo.required = true;
-    } else {
-        divIndirizzo.style.display = 'none';
-        inputIndirizzo.required = false;
-        inputIndirizzo.value = ''; // Pulisce se si sceglie asporto
-    }
+    document.getElementById('divIndirizzo').style.display = (tipo === 'domicilio') ? 'block' : 'none';
+    calcolaPreventivo(); 
 }
 
-async function inviaOrdine() {
-    const btn = document.querySelector('#formOrdine button[type="submit"]');
-    const testoOriginale = btn.innerText;
-    
-    btn.disabled = true;
-    btn.innerText = "Calcolo costi...";
+async function calcolaPreventivo() {
+    const indirizzo = document.getElementById('indirizzo').value;
+    const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
+    const btn = document.getElementById('btnPaga');
+    const box = document.getElementById('boxPreventivo');
 
-    let totalePiatti = 0;
-    carrello.forEach(p => totalePiatti += (p.price || p.prezzo || 0) * p.quantita);
-
-    const tipoConsegna = document.querySelector('input[name="tipoConsegna"]:checked').value;
-    const indirizzoConsegna = document.getElementById('indirizzo').value;
-    const ristoranteId = carrello[0].ristoranteId;
-
-    if (!ristoranteId) {
-        alert("Errore dati ristorante. Riprova.");
-        btn.disabled = false; btn.innerText = testoOriginale;
+    // Se domicilio ma senza indirizzo, nascondi e disabilita
+    if(tipo === 'domicilio' && !indirizzo) {
+        box.style.display = 'none';
+        btn.disabled = true;
         return;
     }
 
+    // Calcolo totale piatti locale per visualizzazione
+    let totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
+
     const payload = {
-        clienteId: CLIENT_ID,
-        ristoranteId: ristoranteId,
         piatti: carrello,
-        totale: totalePiatti, // Inviamo il parziale, il server aggiungerà la consegna
-        tipoConsegna: tipoConsegna,
-        indirizzoConsegna: tipoConsegna === 'domicilio' ? indirizzoConsegna : null
+        tipoConsegna: tipo,
+        indirizzoConsegna: indirizzo,
+        ristoranteId: carrello[0].ristoranteId
     };
 
     try {
-        const res = await fetch('http://localhost:3000/ordine', {
+        // Chiamata all'API di preventivo
+        const res = await fetch('http://localhost:3000/ordine/preventivo', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload)
         });
+        const d = await res.json();
 
-        const data = await res.json();
+        // Aggiorna UI
+        document.getElementById('prevPrep').innerText = d.tempoPreparazione + " min";
+        document.getElementById('prevViaggio').innerText = d.tempoViaggio + " min";
+        document.getElementById('prevCosto').innerText = "€" + d.costoConsegna.toFixed(2);
+        
+        const finale = totPiatti + d.costoConsegna;
+        document.getElementById('prevTotale').innerText = "€" + finale.toFixed(2);
 
-        if (res.ok) {
-            // Messaggio completo con i costi calcolati dal server
-            let msg = `✅ Ordine inviato con successo!\n\n`;
-            msg += `🍲 Piatti: €${totalePiatti.toFixed(2)}\n`;
-            
-            if(data.costoConsegnaCalcolato > 0) {
-                msg += `🛵 Consegna: €${data.costoConsegnaCalcolato.toFixed(2)}\n`;
-            }
-            
-            msg += `--------------------------\n`;
-            msg += `💰 TOTALE: €${data.totaleFinale.toFixed(2)}`;
+        box.style.display = 'block';
+        btn.disabled = false; // Abilita pagamento
+    } catch(e) { console.error(e); }
+}
 
-            alert(msg);
-            
-            carrello = [];
-            salvaEaggiorna();
-            window.location.href = 'cliente.html';
-        } else {
-            alert("Errore: " + (data.message || "Impossibile inviare ordine"));
-            btn.disabled = false; btn.innerText = testoOriginale;
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Errore di connessione.");
-        btn.disabled = false; btn.innerText = testoOriginale;
+async function inviaOrdine() {
+    let totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
+    const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
+    const indirizzo = document.getElementById('indirizzo').value;
+
+    const payload = {
+        clienteId: CLIENT_ID,
+        ristoranteId: carrello[0].ristoranteId,
+        piatti: carrello,
+        totale: totPiatti, 
+        tipoConsegna: tipo,
+        indirizzoConsegna: tipo === 'domicilio' ? indirizzo : null
+    };
+
+    const res = await fetch('http://localhost:3000/ordine', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+    });
+
+    if(res.ok) {
+        alert("Ordine confermato!");
+        svuotaCarrello();
+        window.location.href = 'cliente.html';
+    } else {
+        alert("Errore invio");
     }
 }

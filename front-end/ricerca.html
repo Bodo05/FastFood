@@ -81,6 +81,7 @@
 
             if (ristorante) {
                 document.getElementById('inputRicerca').value = ristorante;
+                // Imposta il tipo su ristorante ma cerchiamo i piatti di quel ristorante
                 document.getElementById('tipoRicerca').value = 'ristorante';
                 cercaPiattiDiRistorante(ristorante);
             } else if (query) {
@@ -97,17 +98,19 @@
             loading.classList.remove('d-none');
 
             try {
-                // NOTA: Per "Vedi Menu" usiamo la ricerca per ristorante che restituisce il menu
+                // Usiamo la rotta specifica per ristorante
                 const res = await fetch(`${API_URL}/ricerca/ristorante?q=${encodeURIComponent(nomeRistorante)}`);
                 const dati = await res.json();
                 
+                // Se il ristorante ha un menu, lo mostriamo
                 if (dati.length > 0 && dati[0].piattiMenu) {
                     mostraRisultati(dati[0].piattiMenu, 'generale');
                 } else {
-                    container.innerHTML = '<div class="alert alert-warning">Nessun piatto trovato.</div>';
+                    container.innerHTML = '<div class="alert alert-warning">Nessun piatto trovato per questo ristorante.</div>';
                 }
             } catch (err) {
                 console.error(err);
+                container.innerHTML = '<div class="alert alert-danger">Errore caricamento.</div>';
             } finally {
                 loading.classList.add('d-none');
             }
@@ -126,7 +129,7 @@
 
             let endpoint = '';
             
-            // --- MAPPING DELLE NUOVE ROTTE SEPARATE ---
+            // MAPPA LE NUOVE ROTTE SEPARATE DI INDEX.JS
             switch (tipo) {
                 case 'generale': endpoint = `/ricerca/generale?q=${encodeURIComponent(query)}`; break;
                 case 'ingrediente': endpoint = `/ricerca/ingrediente?q=${encodeURIComponent(query)}`; break;
@@ -149,6 +152,7 @@
             }
         }
 
+        // Funzione robusta per leggere ingredienti da Array o Stringa
         function getIngredienti(piatto) {
             if (piatto.ingredients && Array.isArray(piatto.ingredients)) {
                 return piatto.ingredients.join(', ');
@@ -175,11 +179,14 @@
             }
 
             dati.forEach(item => {
-                if (tipo === 'piatto_ristorante') {
-                    renderCardRistorantePiatto(item, container);
-                } else if (item.tipo === 'ristorante' || (item.nomeRistorante && !item.prezzo)) { 
+                // Se è un ristorante (ha nomeRistorante e NON prezzo) o la ricerca era per tipo ristorante
+                if ((item.tipo === 'ristorante') || (item.nomeRistorante && !item.prezzo)) { 
                     renderCardRistorante(item, container);
-                } else { 
+                } 
+                else if (tipo === 'piatto_ristorante') {
+                    renderCardRistorantePiatto(item, container);
+                } 
+                else { 
                     renderCardPiatto(item, container);
                 }
             });
@@ -205,7 +212,7 @@
                             <i class="bi bi-basket"></i> ${testoIngredienti}
                         </p>
                         <div class="mt-auto d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-primary">€${piatto.prezzo || 'N/D'}</span>
+                            <span class="fw-bold text-primary">€${(piatto.prezzo||0).toFixed(2)}</span>
                             <button class="btn btn-sm btn-outline-success" 
                                 onclick="aggiungiCarrello('${piatto._id}', '${nome.replace(/'/g, "\\'")}', ${piatto.prezzo || 0}, '${img}', '${piatto.categoria}', '${rId}', '${ristNome.replace(/'/g, "\\'")}')">
                                 + Carrello
@@ -220,6 +227,7 @@
             const col = document.createElement('div');
             col.className = 'col-md-6';
             let menuHtml = '';
+            // Se la ricerca ha popolato il menu con $lookup
             if(ristorante.piattiMenu && ristorante.piattiMenu.length > 0) {
                 const anteprima = ristorante.piattiMenu.map(p => p.nome || p.strMeal).slice(0,3).join(', ');
                 menuHtml = `<hr><small class="text-muted">Menu: ${anteprima}...</small>`;
