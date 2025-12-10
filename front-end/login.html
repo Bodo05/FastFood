@@ -1,46 +1,125 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Login - FastFood</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FastFood</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-primary">
-<div class="container">
-  <div class="row justify-content-center align-items-center min-vh-100">
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card shadow">
-        <div class="card-body p-4">
-          <h3 class="text-center text-primary">FAST FOOD</h3>
-          <p class="text-center text-muted">Login</p>
+<body style="background-color: #e6f7ff;">
 
-          <div class="d-flex justify-content-around mb-3">
-            <button id="btnCliente" class="btn btn-primary" onclick="setLoginType('cliente')">Cliente</button>
-            <button id="btnRistoratore" class="btn btn-outline-secondary" onclick="setLoginType('ristoratore')">Ristoratore</button>
-          </div>
-
-          <form id="loginForm" onsubmit="event.preventDefault(); login();">
-            <div class="mb-3">
-              <label>Email</label>
-              <input id="email" type="email" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label>Password</label>
-              <input id="password" type="password" class="form-control" required>
-            </div>
-            <div class="d-grid">
-              <button class="btn btn-primary">Accedi</button>
-            </div>
-            <p class="text-center mt-3">Non hai un account? <a href="registrazione.html">Registrati</a></p>
-          </form>
-
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">FastFood Project</a>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
+    </nav>
 
-<script src="login.js"></script>
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="liveToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body fw-bold" id="toastMessage"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+        <div class="card shadow border-0" style="max-width: 400px; width: 100%;">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold text-primary">Accedi</h3>
+                    <p class="text-muted">Inserisci le tue credenziali</p>
+                </div>
+
+                <form onsubmit="event.preventDefault(); login();">
+                    <div class="mb-3">
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="userType" id="typeCliente" value="cliente" checked>
+                            <label class="btn btn-outline-primary" for="typeCliente">Cliente</label>
+                            <input type="radio" class="btn-check" name="userType" id="typeRistoratore" value="ristoratore">
+                            <label class="btn btn-outline-primary" for="typeRistoratore">Ristoratore</label>
+                        </div>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
+                        <label for="email">Indirizzo Email</label>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input type="password" class="form-control" id="password" placeholder="Password" required>
+                        <label for="password">Password</label>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg fw-bold" id="btnLogin">Login</button>
+                    </div>
+
+                    <div class="text-center">
+                        <small class="text-muted">Non hai un account? <a href="registrazione.html" class="text-decoration-none">Registrati qui</a></small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Funzione per mostrare notifiche eleganti
+        function showToast(message, type = 'danger') {
+            const toastEl = document.getElementById('liveToast');
+            const toastBody = document.getElementById('toastMessage');
+            
+            // Imposta colore
+            toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+            toastBody.innerText = message;
+            
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const type = document.querySelector('input[name="userType"]:checked').value;
+            const btn = document.getElementById('btnLogin');
+            
+            const baseUrl = 'http://localhost:3000'; 
+            const endpoint = type === 'ristoratore' ? `${baseUrl}/ristoratore/login` : `${baseUrl}/auth/login`;
+            const payload = { email, password, type };
+
+            btn.disabled = true;
+            btn.innerText = "Accesso...";
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast("Login effettuato! Reindirizzamento...", "success");
+                    localStorage.setItem('_id', data._id);
+                    localStorage.setItem('userType', type);
+                    setTimeout(() => {
+                        if (type === 'ristoratore') window.location.href = 'ristoratore.html';
+                        else window.location.href = 'cliente.html';
+                    }, 1000);
+                } else {
+                    showToast(data.message || "Credenziali non valide", "danger");
+                    btn.disabled = false;
+                    btn.innerText = "Login";
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Errore di connessione al server", "danger");
+                btn.disabled = false;
+                btn.innerText = "Login";
+            }
+        }
+    </script>
 </body>
 </html>
