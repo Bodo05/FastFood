@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
 const axios = require('axios');
-const fs = require('fs'); // Modulo per leggere i file
+const fs = require('fs'); 
 
 const app = express();
 const port = 3000;
@@ -33,7 +33,6 @@ async function setupDatabase() {
                 const jsonData = JSON.parse(data);
                 
                 // 3. Gestiamo la struttura del JSON
-                // A volte il JSON è un array diretto [...], a volte è un oggetto { "meals": [...] }
                 let piattiDaInserire = [];
                 if (Array.isArray(jsonData)) {
                     piattiDaInserire = jsonData;
@@ -44,10 +43,28 @@ async function setupDatabase() {
                     return;
                 }
 
-                // 4. Inseriamo i dati nel database
-                if (piattiDaInserire.length > 0) {
-                    await catalogCollection.insertMany(piattiDaInserire);
-                    console.log(`✅ Importazione completata! Inseriti ${piattiDaInserire.length} piatti in 'catalog'.`);
+                // === 4. PULIZIA DEI DATI (FIX PER L'ERRORE $oid) ===
+                // Questo passaggio converte il formato { "$oid": "..." } in un vero ObjectId
+                const piattiPuliti = piattiDaInserire.map(piatto => {
+                    // Creiamo una copia dell'oggetto
+                    let nuovoPiatto = { ...piatto };
+
+                    // Se l'ID è nel formato problematico { $oid: "..." }
+                    if (nuovoPiatto._id && nuovoPiatto._id.$oid) {
+                        nuovoPiatto._id = new ObjectId(nuovoPiatto._id.$oid);
+                    }
+                    
+                    // Opzionale: Se vuoi rigenerare gli ID da zero ed evitare problemi futuri,
+                    // puoi scommentare la riga sotto:
+                    // delete nuovoPiatto._id; 
+
+                    return nuovoPiatto;
+                });
+
+                // 5. Inseriamo i dati puliti nel database
+                if (piattiPuliti.length > 0) {
+                    await catalogCollection.insertMany(piattiPuliti);
+                    console.log(`✅ Importazione completata! Inseriti ${piattiPuliti.length} piatti in 'catalog'.`);
                 } else {
                     console.log("⚠️ Il file meals1.json non contiene piatti validi.");
                 }
