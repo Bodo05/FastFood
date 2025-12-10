@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
-// --- CARICAMENTO DATI PER LA MODIFICA ---
 async function caricaPiattoEsistente(pId) {
     try {
         const res = await fetch(`http://localhost:3000/ristoratore/${rId}/piatti`);
@@ -35,14 +34,12 @@ async function caricaPiattoEsistente(pId) {
 
         if (!piatto) throw new Error('Piatto non trovato nel menu.');
 
-        // Aggiorna la UI per la modalità Modifica
         document.getElementById('formTitle').innerText = `Modifica: ${piatto.nome}`;
         document.getElementById('titlePage').innerText = `Modifica Piatto`;
         document.getElementById('btnSalva').innerText = `💾 Salva Modifiche`;
         document.getElementById('btnSalva').classList.remove('btn-success');
         document.getElementById('btnSalva').classList.add('btn-warning', 'text-dark');
         
-        // Pre-compila i campi
         document.getElementById('nome').value = piatto.nome;
         document.getElementById('prezzo').value = piatto.prezzo;
         document.getElementById('tempo').value = piatto.tempo;
@@ -50,7 +47,6 @@ async function caricaPiattoEsistente(pId) {
         document.getElementById('foto').value = piatto.thumb;
         aggiornaPreview();
 
-        // Popola ingredienti
         if (piatto.ingredienti) {
             ingredienti = piatto.ingredienti.split(',').map(s => s.trim()).filter(s => s);
         } else if (piatto.ingredients && Array.isArray(piatto.ingredients)) {
@@ -60,12 +56,10 @@ async function caricaPiattoEsistente(pId) {
         aggiornaListaIngredienti();
 
     } catch (err) {
-        mostraToast('Errore nel caricamento del piatto', 'error');
+        showToast('Errore nel caricamento del piatto', 'danger');
     }
 }
 
-
-// --- LOGICA DI CREAZIONE (Catalogo) ---
 async function caricaCatalogo() {
     try {
         const res = await fetch('http://localhost:3000/catalog');
@@ -142,7 +136,6 @@ function rimuoviIng(i) {
     aggiornaListaIngredienti();
 }
 
-// --- SALVATAGGIO FINALE (GESTIONE PUT vs POST) ---
 async function salvaPiatto() {
     const nome = document.getElementById('nome').value;
     const prezzo = parseFloat(document.getElementById('prezzo').value);
@@ -152,7 +145,7 @@ async function salvaPiatto() {
     const btn = document.getElementById('btnSalva');
     
     if (!nome || !prezzo || !categoria) {
-        mostraToast('Compila almeno Nome, Prezzo e Categoria', 'error');
+        showToast('Compila almeno Nome, Prezzo e Categoria', 'danger');
         return;
     }
     
@@ -168,11 +161,9 @@ async function salvaPiatto() {
     let method;
     
     if (piattoInModificaId) {
-        // MODALITA' EDITING: Usa PUT
         url = `http://localhost:3000/ristoratore/${rId}/piatti/${piattoInModificaId}`;
         method = 'PUT';
     } else {
-        // MODALITA' CREAZIONE: Usa POST
         url = `http://localhost:3000/ristoratore/${rId}/piatti`;
         method = 'POST';
     }
@@ -185,27 +176,15 @@ async function salvaPiatto() {
         });
 
         if (res.ok) {
-            mostraToast(`Piatto ${method === 'PUT' ? 'modificato' : 'aggiunto'} con successo!`, 'success');
-            setTimeout(() => window.location.href = 'ristoratore.html', 1000);
+            showToast(`Piatto ${method === 'PUT' ? 'modificato' : 'aggiunto'} con successo!`, 'success');
+            setTimeout(() => window.location.href = 'ristoratore.html', 1500);
         } else {
             const data = await res.json();
-            mostraToast(`Errore nel salvataggio: ${data.message || res.status}`, 'error');
+            showToast(`Errore: ${data.message || res.status}`, 'danger');
         }
     } catch (err) {
-        mostraToast('Errore di connessione', 'error');
+        showToast('Errore di connessione', 'danger');
     } finally {
         btn.disabled = false;
     }
-}
-
-function mostraToast(msg, type) {
-    const tBody = document.getElementById('toastBody');
-    tBody.textContent = msg;
-    tBody.className = type === 'success' ? 'toast-body bg-success text-white' : 'toast-body bg-danger text-white';
-    new bootstrap.Toast(document.getElementById('messaggioToast')).show();
-}
-
-function logout() {
-    localStorage.clear();
-    window.location.href = 'login.html';
 }

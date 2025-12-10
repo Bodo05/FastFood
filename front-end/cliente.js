@@ -3,25 +3,17 @@ if (!CLIENT_ID || localStorage.getItem('userType') !== 'cliente') {
   window.location.href = 'login.html';
 }
 
-function logout() {
-  localStorage.clear();
-  window.location.href = 'login.html';
-}
-
 window.onload = async () => {
   try {
-    // 1. Carica dati cliente per le preferenze
     const clienteRes = await fetch(`http://localhost:3000/cliente/${CLIENT_ID}`);
     if (!clienteRes.ok) throw new Error('Errore caricamento dati cliente');
     const cliente = await clienteRes.json();
     const preferenze = cliente.preferenze || [];
 
-    // 2. Carica i piatti DAL DATABASE (Filtrati dal backend per avere un ristorante)
     const mealsRes = await fetch('http://localhost:3000/meals');
     if (!mealsRes.ok) throw new Error('Errore caricamento meals');
     const meals = await mealsRes.json();
 
-    // 3. Filtra per preferenze (se presenti), altrimenti mostra tutto
     let consigliati = meals;
     if (preferenze.length > 0) {
         const preferiti = meals.filter(m => preferenze.some(p => (m.categoria || '').includes(p)));
@@ -32,7 +24,7 @@ window.onload = async () => {
     container.innerHTML = '';
 
     if (consigliati.length === 0) {
-      container.innerHTML = '<div class="col-12"><div class="alert alert-info">Non ci sono ancora piatti attivi dai ristoranti.</div></div>';
+      container.innerHTML = '<div class="col-12"><div class="alert alert-info">Non ci sono ancora piatti attivi.</div></div>';
       return;
     }
 
@@ -45,7 +37,6 @@ window.onload = async () => {
       const ristorante = p.ristoranteNome || 'Ristorante Sconosciuto';
       const tempo = p.tempo ? `${p.tempo} min` : 'N/A';
       const categoria = p.categoria || 'Generale';
-      
       const rId = p.ristoranteId || ''; 
 
       const card = document.createElement('div');
@@ -58,18 +49,14 @@ window.onload = async () => {
           </div>
           <div class="card-body d-flex flex-column">
             <h5 class="card-title mb-1">${p.nome}</h5>
-            <p class="text-muted small mb-2">
-                <i class="bi bi-shop"></i> Venduto da: <strong>${ristorante}</strong>
-            </p>
+            <p class="text-muted small mb-2"><i class="bi bi-shop"></i> Venduto da: <strong>${ristorante}</strong></p>
             
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <span class="h5 mb-0 text-primary">${prezzo}</span>
                 <small class="text-muted">⏱ ${tempo}</small>
             </div>
 
-            <p class="card-text small text-secondary text-truncate">
-                ${p.ingredienti || 'Ingredienti non specificati'}
-            </p>
+            <p class="card-text small text-secondary text-truncate">${p.ingredienti || ''}</p>
 
             <div class="mt-auto">
               <button class="btn btn-outline-primary w-100" 
@@ -88,7 +75,6 @@ window.onload = async () => {
   }
 };
 
-// Funzione per aggiungere al carrello salvando il Ristorante ID
 function aggiungiCarrello(idMeal, strMeal, price, strMealThumb, strCategory, ristoranteId, ristoranteNome) {
   let carrello = JSON.parse(localStorage.getItem('carrello') || '[]');
   const piattoEsistente = carrello.find(item => item.idMeal === idMeal);
@@ -97,22 +83,15 @@ function aggiungiCarrello(idMeal, strMeal, price, strMealThumb, strCategory, ris
     piattoEsistente.quantita += 1;
   } else {
     carrello.push({
-      idMeal,
-      strMeal,
-      strMealThumb,
-      price,
-      strCategory,
-      ristoranteId,   
-      ristoranteNome, 
-      quantita: 1
+      idMeal, strMeal, strMealThumb, price, strCategory, ristoranteId, ristoranteNome, quantita: 1
     });
   }
   localStorage.setItem('carrello', JSON.stringify(carrello));
   
-  const toast = document.createElement('div');
-  toast.className = 'position-fixed bottom-0 end-0 m-3 alert alert-success shadow';
-  toast.style.zIndex = '9999';
-  toast.innerHTML = `<strong>${strMeal}</strong> aggiunto al carrello!`;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  // --- QUI USA LA NUOVA NOTIFICA BOOTSTRAP ---
+  if(typeof showToast === 'function') {
+      showToast(`<strong>${strMeal}</strong> aggiunto al carrello!`, 'success');
+  } else {
+      alert(`${strMeal} aggiunto al carrello!`);
+  }
 }

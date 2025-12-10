@@ -3,93 +3,149 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Profilo</title>
+<title>Profilo Cliente</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+    
     <div id="navbar-placeholder"></div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toastPlaceHolder" style="z-index: 1055;"></div>
+
     <div class="container mt-4">
         <div class="row">
             <div class="col-md-4">
-                <div class="card p-3 mb-3">
-                    <h5>Il tuo Profilo</h5>
-                    <div class="mb-2"><label>Nome</label><input id="nome" class="form-control"></div>
-                    <div class="mb-2"><label>Cognome</label><input id="cognome" class="form-control"></div>
-                    <div class="mb-2"><label>Email</label><input id="email" class="form-control" disabled></div>
-                    <select id="categoriaPreferita" class="form-select mb-3"></select>
-                    <button class="btn btn-success w-100" onclick="aggiorna()">Salva</button>
-                    <button class="btn btn-danger w-100 mt-2" onclick="elimina()">Elimina Account</button>
+                <div class="card p-4 mb-3 shadow-sm border-0">
+                    <h4 class="mb-3 text-primary">Il tuo Profilo</h4>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Nome</label>
+                        <input id="nome" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Cognome</label>
+                        <input id="cognome" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Email</label>
+                        <input id="email" class="form-control" disabled>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small text-muted">Categoria Preferita</label>
+                        <select id="categoriaPreferita" class="form-select"></select>
+                    </div>
+
+                    <button class="btn btn-primary w-100 fw-bold mb-2" onclick="aggiorna()">
+                        💾 Salva Modifiche
+                    </button>
+                    <button class="btn btn-outline-danger w-100" onclick="elimina()">
+                        🗑️ Elimina Account
+                    </button>
                 </div>
             </div>
+
             <div class="col-md-8">
-                <h4>I Tuoi Ordini</h4>
-                <div id="storico" class="list-group"></div>
+                <h4 class="mb-3">I Tuoi Ordini</h4>
+                <div id="storico" class="list-group shadow-sm">
+                    <div class="list-group-item text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
     <script src="navbar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
     const id = localStorage.getItem('_id');
     if(!id) location.href='login.html';
 
-    // Carica Profilo e Ordini
+    // --- NUOVA FUNZIONE NOTIFICHE ---
+    function showToast(message, type = 'danger') {
+        const container = document.getElementById('toastPlaceHolder');
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+          <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+              <div class="toast-body fw-bold">
+                ${message}
+              </div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+          </div>
+        `;
+        container.appendChild(wrapper.firstElementChild);
+        const toastEl = container.lastElementChild;
+        new bootstrap.Toast(toastEl).show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    }
+
+    // Caricamento Dati
     (async () => {
-        // Categorie
-        const cats = await (await fetch('http://localhost:3000/categorie-catalogo')).json();
-        const sel = document.getElementById('categoriaPreferita');
-        cats.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+        try {
+            // 1. Categorie
+            const cats = await (await fetch('http://localhost:3000/categorie-catalogo')).json();
+            const sel = document.getElementById('categoriaPreferita');
+            sel.innerHTML = '<option value="">-- Seleziona --</option>';
+            cats.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
 
-        // Dati Utente
-        const user = await (await fetch(`http://localhost:3000/cliente/${id}`)).json();
-        document.getElementById('nome').value = user.nome || '';
-        document.getElementById('cognome').value = user.cognome || '';
-        document.getElementById('email').value = user.email || '';
-        if(user.preferenze?.length) sel.value = user.preferenze[0];
+            // 2. Dati Utente
+            const user = await (await fetch(`http://localhost:3000/cliente/${id}`)).json();
+            document.getElementById('nome').value = user.nome || '';
+            document.getElementById('cognome').value = user.cognome || '';
+            document.getElementById('email').value = user.email || '';
+            if(user.preferenze?.length) sel.value = user.preferenze[0];
 
-        // Ordini
-        const ordini = await (await fetch(`http://localhost:3000/cliente/${id}/ordini`)).json();
-        const div = document.getElementById('storico');
-        
-        if(ordini.length === 0) div.innerHTML = '<p class="text-muted">Nessun ordine.</p>';
-        else {
-            ordini.forEach(o => {
-                const tot = parseFloat(o.totale||0);
-                const cons = parseFloat(o.costoConsegna||0);
-                const cibo = tot - cons;
-                const data = new Date(o.dataCreazione).toLocaleDateString();
-                const tipoConsegna = o.tipoConsegna === 'domicilio' ? 'Domicilio' : 'Asporto';
+            // 3. Ordini
+            const ordini = await (await fetch(`http://localhost:3000/cliente/${id}/ordini`)).json();
+            const div = document.getElementById('storico');
+            div.innerHTML = '';
+            
+            if(ordini.length === 0) {
+                div.innerHTML = '<div class="list-group-item text-center text-muted py-4">Non hai ancora effettuato ordini.</div>';
+            } else {
+                ordini.forEach(o => {
+                    const tot = parseFloat(o.totale||0);
+                    const cons = parseFloat(o.costoConsegna||0);
+                    const cibo = tot - cons;
+                    const data = new Date(o.dataCreazione).toLocaleDateString();
+                    
+                    let badgeClass = 'bg-secondary';
+                    if(o.stato === 'in_coda') badgeClass = 'bg-warning text-dark';
+                    if(o.stato === 'in_preparazione') badgeClass = 'bg-primary';
+                    if(o.stato === 'consegnato') badgeClass = 'bg-success';
+                    
+                    const infoConsegna = o.tipoConsegna === 'domicilio' 
+                        ? `<span class="text-danger small">+€${cons.toFixed(2)} sped.</span>` 
+                        : '<span class="text-success small">Ritiro</span>';
 
-                let badgeClass = 'bg-secondary';
-                if(o.stato === 'in_coda') badgeClass = 'bg-warning text-dark';
-                if(o.stato === 'in_preparazione') badgeClass = 'bg-primary';
-                if(o.stato === 'consegnato') badgeClass = 'bg-success';
-                
-                // Dettaglio Spedizione Condizionale
-                const infoConsegna = o.tipoConsegna === 'domicilio' 
-                    ? `<span class="text-danger small">+€${cons.toFixed(2)} spedizione</span>` 
-                    : '<span class="text-success small">Ritiro gratuito</span>';
-
-                div.innerHTML += `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between">
-                        <h5 class="mb-1">${o.ristoranteNome || 'Ristorante'}</h5>
-                        <small class="badge ${badgeClass}">${o.stato.replace('_',' ')}</small>
-                    </div>
-                    <p class="mb-1 small text-muted">
-                        ${o.piatti.map(p=>p.nome||p.strMeal).join(', ')}
-                    </p>
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <small class="text-secondary">
-                            📅 ${data} • ${tipoConsegna}<br>
-                            ⏱ Prep: ${o.tempoPreparazione||15}m + Viaggio: ${o.tempoViaggio||0}m
-                        </small>
-                        <div class="text-end">
-                            <small class="d-block text-muted">Cibo: €${cibo.toFixed(2)} ${infoConsegna}</small>
-                            <span class="text-primary fw-bold">Totale: €${tot.toFixed(2)}</span>
+                    div.innerHTML += `
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-1 text-dark">${o.ristoranteNome || 'Ristorante'}</h5>
+                            <span class="badge ${badgeClass}">${o.stato.replace('_',' ').toUpperCase()}</span>
                         </div>
-                    </div>
-                </div>`;
-            });
+                        <p class="mb-1 small text-muted text-truncate">
+                            ${o.piatti.map(p=>p.nome||p.strMeal).join(', ')}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center mt-2 border-top pt-2">
+                            <small class="text-secondary">
+                                📅 ${data} • ⏱ Tot: ${(o.tempoPreparazione||15) + (o.tempoViaggio||0)} min
+                            </small>
+                            <div class="text-end">
+                                <small class="d-block text-muted" style="font-size: 0.85em;">Cibo: €${cibo.toFixed(2)} ${infoConsegna}</small>
+                                <span class="text-primary fw-bold">Totale: €${tot.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            }
+        } catch(e) {
+            console.error(e);
+            showToast("Errore nel caricamento dati", "danger");
         }
     })();
 
@@ -97,16 +153,37 @@
         const nome = document.getElementById('nome').value;
         const cognome = document.getElementById('cognome').value;
         const pref = [document.getElementById('categoriaPreferita').value];
-        await fetch(`http://localhost:3000/cliente/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,cognome,preferenze:pref})});
-        alert('Salvato');
+        
+        try {
+            const res = await fetch(`http://localhost:3000/cliente/${id}`, {
+                method: 'PUT', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify({nome, cognome, preferenze: pref})
+            });
+            
+            if(res.ok) showToast('Profilo aggiornato con successo!', 'success');
+            else showToast('Errore durante l\'aggiornamento', 'warning');
+        } catch(e) { 
+            showToast("Errore di connessione", "danger"); 
+        }
     }
+
     async function elimina() {
-        if(confirm('Sicuro?')) {
-            await fetch(`http://localhost:3000/cliente/${id}`, {method:'DELETE'});
-            localStorage.clear(); location.href='login.html';
+        if(!confirm('SEI SICURO?\nQuesta azione cancellerà definitivamente il tuo account.')) return;
+        
+        try {
+            const res = await fetch(`http://localhost:3000/cliente/${id}`, {method:'DELETE'});
+            if(res.ok) {
+                showToast('Account eliminato. Arrivederci!', 'success');
+                localStorage.clear();
+                setTimeout(() => location.href='login.html', 1500);
+            } else {
+                showToast('Impossibile eliminare l\'account', 'danger');
+            }
+        } catch(e) { 
+            showToast("Errore di connessione", "danger"); 
         }
     }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

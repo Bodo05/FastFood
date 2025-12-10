@@ -1,94 +1,88 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - FastFood</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body style="background-color: #e6f7ff;">
+// Funzione per mostrare notifiche (Toast) nel Login
+function showToast(message, type = 'danger') {
+    const container = document.getElementById('toastPlaceHolder');
+    if (!container) return alert(message); // Fallback di sicurezza
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="#">FastFood Project</a>
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body fw-bold">
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
-    </nav>
+      </div>
+    `;
+    
+    container.appendChild(wrapper.firstElementChild);
+    const toastEl = container.lastElementChild;
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+    
+    // Rimuove l'elemento HTML quando la notifica sparisce
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
 
-    <div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
-        <div class="card shadow border-0" style="max-width: 400px; width: 100%;">
-            <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <h3 class="fw-bold text-primary">Accedi</h3>
-                    <p class="text-muted">Inserisci le tue credenziali</p>
-                </div>
+async function login() {
+    const emailField = document.getElementById('email');
+    const passwordField = document.getElementById('password');
+    const btn = document.getElementById('btnLogin');
 
-                <form onsubmit="event.preventDefault(); login();">
-                    
-                    <div class="mb-3">
-                        <div class="btn-group w-100" role="group">
-                            <input type="radio" class="btn-check" name="userType" id="typeCliente" value="cliente" checked>
-                            <label class="btn btn-outline-primary" for="typeCliente">Cliente</label>
+    // Controllo campi vuoti
+    if (!emailField.value || !passwordField.value) {
+        showToast("Inserisci email e password", "warning");
+        return;
+    }
 
-                            <input type="radio" class="btn-check" name="userType" id="typeRistoratore" value="ristoratore">
-                            <label class="btn btn-outline-primary" for="typeRistoratore">Ristoratore</label>
-                        </div>
-                    </div>
+    const email = emailField.value;
+    const password = passwordField.value;
+    
+    // Recupera il tipo utente dai radio button (Cliente o Ristoratore)
+    const typeElement = document.querySelector('input[name="userType"]:checked');
+    const type = typeElement ? typeElement.value : 'cliente';
 
-                    <div class="form-floating mb-3">
-                        <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
-                        <label for="email">Indirizzo Email</label>
-                    </div>
+    // Disabilita pulsante per evitare doppi click
+    const testoOriginale = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "Accesso in corso...";
 
-                    <div class="form-floating mb-3">
-                        <input type="password" class="form-control" id="password" placeholder="Password" required>
-                        <label for="password">Password</label>
-                    </div>
+    // Determina l'URL corretto in base al tipo
+    const baseUrl = 'http://localhost:3000'; 
+    const endpoint = type === 'ristoratore' ? `${baseUrl}/ristoratore/login` : `${baseUrl}/auth/login`;
+    
+    const payload = { email, password, type };
 
-                    <div class="d-grid mb-3">
-                        <button type="submit" class="btn btn-primary btn-lg fw-bold">Login</button>
-                    </div>
+    try {
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
 
-                    <div class="text-center">
-                        <small class="text-muted">Non hai un account? <a href="registrazione.html" class="text-decoration-none">Registrati qui</a></small>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+        const data = await res.json();
 
-    <script>
-        async function login() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const type = document.querySelector('input[name="userType"]:checked').value;
+        if (res.ok) {
+            showToast("Login effettuato con successo!", "success");
             
-            const endpoint = type === 'ristoratore' ? 'http://localhost:3000/ristoratore/login' : 'http://localhost:3000/auth/login';
-            const payload = { email, password, type };
+            // Salva i dati essenziali
+            localStorage.setItem('_id', data._id);
+            localStorage.setItem('userType', type);
 
-            try {
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    localStorage.setItem('_id', data._id);
-                    localStorage.setItem('userType', type);
-                    
-                    if (type === 'ristoratore') window.location.href = 'ristoratore.html';
-                    else window.location.href = 'cliente.html';
-                } else {
-                    alert("Errore: " + (data.message || "Credenziali non valide"));
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Errore di connessione al server");
-            }
+            // Redirect dopo 1.5 secondi
+            setTimeout(() => {
+                if (type === 'ristoratore') window.location.href = 'ristoratore.html';
+                else window.location.href = 'cliente.html';
+            }, 1500);
+        } else {
+            showToast(data.message || "Credenziali non valide", "danger");
+            btn.disabled = false;
+            btn.innerText = testoOriginale;
         }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    } catch (e) {
+        console.error(e);
+        showToast("Errore di connessione al server", "danger");
+        btn.disabled = false;
+        btn.innerText = testoOriginale;
+    }
+}

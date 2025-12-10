@@ -2,16 +2,27 @@ let tipoUtente = 'cliente';
 let catalogoCompleto = [];
 let menuRistoratore = [];
 
-// Funzione Helper per le Notifiche (Toast)
+// --- FUNZIONE NOTIFICHE BOOTSTRAP DINAMICA ---
 function showToast(message, type = 'danger') {
-    const toastEl = document.getElementById('liveToast');
-    const toastBody = document.getElementById('toastMessage');
-    if(!toastEl) return alert(message); // Fallback se manca HTML
+    const container = document.getElementById('toastPlaceHolder');
+    if (!container) return alert(message); // Fallback
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body fw-bold">
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    `;
     
-    toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
-    toastBody.innerText = message;
-    const toast = new bootstrap.Toast(toastEl);
-    toast.show();
+    container.appendChild(wrapper.firstElementChild);
+    const toastEl = container.lastElementChild;
+    new bootstrap.Toast(toastEl).show();
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
 }
 
 window.onload = async function() {

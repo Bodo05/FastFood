@@ -3,9 +3,7 @@ const CLIENT_ID = localStorage.getItem('_id');
 
 window.onload = () => {
     if (!CLIENT_ID) { 
-        // Nota: qui alert va bene perché è un redirect bloccante, 
-        // oppure usa showToast ma devi aspettare prima del redirect
-        alert("Login richiesto"); 
+        alert("Login richiesto"); // Qui l'alert va bene perché blocca ed esegue il redirect
         location.href='login.html'; return; 
     }
     aggiornaCarrello();
@@ -53,7 +51,7 @@ function aggiornaCarrello() {
                     </div>
                 </li>`;
         });
-        container.innerHTML += `<ul class="list-group mb-3">${htmlPiatti}</ul>`;
+        container.innerHTML += `<ul class="list-group mb-3 shadow-sm"><li class="list-group-item active fw-bold">${gruppo.nome}</li>${htmlPiatti}</ul>`;
     });
 
     if(totaleEl) totaleEl.innerText = totale.toFixed(2);
@@ -71,7 +69,8 @@ function salva() { localStorage.setItem("carrello", JSON.stringify(carrello)); a
 
 function mostraCheckout() {
     document.getElementById('checkoutSection').style.display = 'block';
-    document.getElementById('checkoutSection').scrollIntoView({behavior:'smooth'});
+    // Smooth scroll verso il basso
+    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     if(tipo === 'asporto') calcolaPreventivo();
 }
@@ -87,12 +86,14 @@ async function calcolaPreventivo() {
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const btn = document.getElementById('btnPaga');
     const box = document.getElementById('boxPreventivo');
-    const totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
+    
+    if (carrello.length === 0) return;
+    let totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
 
+    // Reset UI
     box.style.display = 'none';
     btn.disabled = true;
 
-    if (carrello.length === 0) return;
     if(tipo === 'domicilio' && indirizzo.length < 5) return;
 
     const payload = { piatti: carrello, tipoConsegna: tipo, indirizzoConsegna: indirizzo, ristoranteId: carrello[0].ristoranteId };
@@ -138,15 +139,16 @@ async function inviaOrdine() {
         });
 
         if(res.ok) {
+            // NOTIFICA BOOTSTRAP DI SUCCESSO
             showToast("Ordine confermato! Grazie.", "success");
             svuotaCarrello();
-            setTimeout(() => window.location.href = 'cliente.html', 2000);
+            setTimeout(() => window.location.href = 'cliente.html', 2500);
         } else {
-            showToast("Errore invio ordine", "danger");
+            showToast("Errore invio ordine. Riprova.", "danger");
             btn.disabled = false; btn.innerText = testoOriginale;
         }
     } catch(e) {
-        showToast("Errore connessione", "danger");
+        showToast("Errore connessione al server", "danger");
         btn.disabled = false; btn.innerText = testoOriginale;
     }
 }

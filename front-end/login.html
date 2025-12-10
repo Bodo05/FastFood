@@ -14,14 +14,7 @@
         </div>
     </nav>
 
-    <div class="toast-container position-fixed top-0 end-0 p-3">
-        <div id="liveToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body fw-bold" id="toastMessage"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    </div>
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toastPlaceHolder" style="z-index: 9999;"></div>
 
     <div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
         <div class="card shadow border-0" style="max-width: 400px; width: 100%;">
@@ -65,17 +58,30 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Funzione per mostrare notifiche eleganti
+        // --- NUOVA FUNZIONE NOTIFICHE ---
         function showToast(message, type = 'danger') {
-            const toastEl = document.getElementById('liveToast');
-            const toastBody = document.getElementById('toastMessage');
+            const container = document.getElementById('toastPlaceHolder');
+            const wrapper = document.createElement('div');
             
-            // Imposta colore
-            toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
-            toastBody.innerText = message;
+            // Mappa i colori: danger=rosso, success=verde, warning=giallo
+            wrapper.innerHTML = `
+              <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                  <div class="toast-body fw-bold">
+                    ${message}
+                  </div>
+                  <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+              </div>
+            `;
             
-            const toast = new bootstrap.Toast(toastEl);
+            container.appendChild(wrapper.firstElementChild);
+            const toastElement = container.lastElementChild;
+            const toast = new bootstrap.Toast(toastElement);
             toast.show();
+            
+            // Rimuovi dal codice quando sparisce
+            toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
         }
 
         async function login() {
@@ -107,7 +113,7 @@
                     setTimeout(() => {
                         if (type === 'ristoratore') window.location.href = 'ristoratore.html';
                         else window.location.href = 'cliente.html';
-                    }, 1000);
+                    }, 1500);
                 } else {
                     showToast(data.message || "Credenziali non valide", "danger");
                     btn.disabled = false;
