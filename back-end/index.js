@@ -2,10 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
 const axios = require('axios');
+const fs = require('fs'); // Modulo per leggere i file
 
 const app = express();
 const port = 3000;
-const mongoURL = "mongodb+srv://admin:admin@cluster0.fczult8.mongodb.net/";
+// Inserisci qui la tua stringa di connessione corretta
+const mongoURL = "mongodb+srv://admin:admin@cluster0.fczult8.mongodb.net/"; 
 const dbName = "fastfood";
 
 app.use(cors());
@@ -14,11 +16,61 @@ app.use(express.json());
 const client = new MongoClient(mongoURL);
 let db;
 
+// --- FUNZIONE DI SETUP INIZIALE (SEEDING) ---
+async function setupDatabase() {
+    try {
+        const catalogCollection = db.collection('catalog');
+        
+        // 1. Controlliamo se la collezione 'catalog' è vuota
+        const count = await catalogCollection.countDocuments();
+        
+        if (count === 0) {
+            console.log("⚠️ La collezione 'catalog' è vuota. Avvio importazione da meals1.json...");
+            
+            // 2. Leggiamo il file meals1.json
+            if (fs.existsSync('meals1.json')) {
+                const data = fs.readFileSync('meals1.json', 'utf8');
+                const jsonData = JSON.parse(data);
+                
+                // 3. Gestiamo la struttura del JSON
+                // A volte il JSON è un array diretto [...], a volte è un oggetto { "meals": [...] }
+                let piattiDaInserire = [];
+                if (Array.isArray(jsonData)) {
+                    piattiDaInserire = jsonData;
+                } else if (jsonData.meals && Array.isArray(jsonData.meals)) {
+                    piattiDaInserire = jsonData.meals;
+                } else {
+                    console.error("❌ Formato JSON non riconosciuto. Assicurati che sia un array o contenga 'meals'.");
+                    return;
+                }
+
+                // 4. Inseriamo i dati nel database
+                if (piattiDaInserire.length > 0) {
+                    await catalogCollection.insertMany(piattiDaInserire);
+                    console.log(`✅ Importazione completata! Inseriti ${piattiDaInserire.length} piatti in 'catalog'.`);
+                } else {
+                    console.log("⚠️ Il file meals1.json non contiene piatti validi.");
+                }
+            } else {
+                console.error("❌ ERRORE: File 'meals1.json' non trovato nella cartella del server.");
+            }
+        } else {
+            console.log(`✅ Database già inizializzato. La collezione 'catalog' contiene ${count} elementi.`);
+        }
+    } catch (error) {
+        console.error("Errore durante il setup del database:", error);
+    }
+}
+
 async function startServer() {
     try {
         await client.connect();
         db = client.db(dbName);
         console.log(`Connesso a MongoDB: ${dbName}`);
+        
+        // ESEGUI IL SETUP DEI DATI
+        await setupDatabase();
+
         app.listen(port, () => {
             console.log(`Server in ascolto su http://localhost:${port}`);
         });
@@ -32,6 +84,7 @@ const toObjectId = (id) => {
     try { return new ObjectId(id); } catch { return null; } 
 };
 
+// --- FUNZIONI UTILI ---
 async function getCoordinates(address) {
     try {
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
@@ -77,15 +130,13 @@ async function calcolaDettagliOrdine(piatti, tipoConsegna, indirizzoConsegna, rI
 }
 
 // ==========================================
-// 1. AUTENTICAZIONE E REGISTRAZIONE (REINSERITE)
+// API ROUTES
 // ==========================================
 
 // Login Generico / Cliente
 app.post('/auth/login', async (req, res) => {
     const { email, password, type } = req.body;
-    // Se type non è specificato, controlla clienti di default, o in base al radio button
     const collection = type === 'ristoratore' ? 'ristoratori' : 'clienti';
-    
     try {
         const user = await db.collection(collection).findOne({ email, password });
         if (!user) return res.status(401).json({ message: 'Credenziali errate' });
@@ -95,7 +146,7 @@ app.post('/auth/login', async (req, res) => {
     }
 });
 
-// Login Ristoratore (Specifico)
+// Login Ristoratore
 app.post('/ristoratore/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -160,7 +211,7 @@ app.post('/ristoratore', async (req, res) => {
     }
 });
 
-// Gestione Profili (GET/PUT)
+// Gestione Profili
 app.get('/cliente/:id', async (req, res) => {
     try { res.json(await db.collection('clienti').findOne({ _id: toObjectId(req.params.id) }) || {}); } catch(e){ res.status(500).json({}); }
 });
@@ -186,10 +237,7 @@ app.put('/ristoratore/:id', async (req, res) => {
     } catch(e) { res.status(500).json({}); }
 });
 
-// ==========================================
-// 2. RICERCA (API SEPARATE)
-// ==========================================
-
+// RICERCA
 app.get('/ricerca/generale', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
@@ -237,10 +285,7 @@ app.get('/ricerca/piatto-ristorante', async (req, res) => {
     } catch (err) { res.status(500).json([]); }
 });
 
-// ==========================================
-// 3. MENU E PIATTI (CRUD)
-// ==========================================
-
+// CRUD PIATTI E CATALOGO
 app.put('/ristoratore/:rId/piatti/:pId', async (req, res) => {
     const rId = toObjectId(req.params.rId);
     const pId = toObjectId(req.params.pId);
@@ -273,13 +318,25 @@ app.post('/ristoratore/:id/piatti', async (req, res) => {
 app.get('/meals', async (req, res) => {
     try { res.json(await db.collection('piatti').find({ ristoranteId: { $ne: null } }).limit(100).toArray()); } catch(e) { res.status(500).json([]); }
 });
-app.get('/catalog', async (req, res) => { try { res.json(await db.collection('catalog').find({}).toArray()); } catch(e) { res.status(500).json([]); } });
-app.get('/categorie-catalogo', async (req, res) => { try { res.json(await db.collection('catalog').distinct('strCategory')); } catch(e) { res.status(500).json([]); } });
 
-// ==========================================
-// 4. ORDINI (SCHEDULER & PREVENTIVI)
-// ==========================================
+// API per il CATALOGO (quello popolato da meals1.json)
+app.get('/catalog', async (req, res) => { 
+    try { 
+        res.json(await db.collection('catalog').find({}).toArray()); 
+    } catch(e) { 
+        res.status(500).json([]); 
+    } 
+});
 
+app.get('/categorie-catalogo', async (req, res) => { 
+    try { 
+        res.json(await db.collection('catalog').distinct('strCategory')); 
+    } catch(e) { 
+        res.status(500).json([]); 
+    } 
+});
+
+// ORDINI
 app.post('/ordine/preventivo', async (req, res) => {
     const { piatti, tipoConsegna, indirizzoConsegna, ristoranteId } = req.body;
     try { res.json(await calcolaDettagliOrdine(piatti, tipoConsegna, indirizzoConsegna, ristoranteId)); } catch(e) { res.status(500).json({ error: e.message }); }
@@ -291,7 +348,7 @@ app.post('/ordine', async (req, res) => {
     try {
         const dettagli = await calcolaDettagliOrdine(piatti, tipoConsegna, indirizzoConsegna, rId);
         const minutiTotali = dettagli.tempoPreparazione + dettagli.tempoViaggio;
-        const durataMs = minutiTotali * 1000; // DEMO 1min=1sec
+        const durataMs = minutiTotali * 1000; 
 
         let totaleFinale = parseFloat(totale) + dettagli.costoConsegna;
 
