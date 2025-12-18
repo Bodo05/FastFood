@@ -79,8 +79,8 @@
                     else if(o.stato!=='in_coda') pct = Math.min(100, Math.max(0, (now-start)/(end-start)*100));
 
                     const tipoConsegnaText = o.tipoConsegna === 'domicilio' 
-                        ? '🏠 Consegna a Domicilio' 
-                        : '🛍️ Ritiro in Negozio (Asporto)';
+                        ? ' Consegna a Domicilio' 
+                        : ' Ritiro in Negozio (Asporto)';
                     
                     let spedizioneDetails = '';
                     if (o.tipoConsegna === 'domicilio') {
@@ -89,7 +89,7 @@
                                 <span>Spedizione:</span> <span>€${cons.toFixed(2)}</span>
                             </div>
                             <div class="mb-2 small text-muted">
-                                ⏱ Viaggio: <b>${tViaggio}m</b>
+                                 Viaggio: <b>${tViaggio}m</b>
                             </div>`;
                     }
 
@@ -108,7 +108,7 @@
                                     ${spedizioneDetails}
                                     <div class="d-flex justify-content-between border-top pt-1 mt-1 fw-bold text-success"><span>TOTALE:</span> <span>€${tot.toFixed(2)}</span></div>
                                 </div>
-                                <div class="mb-2 small text-muted">⏱ Prep: <b>${tPrep}m</b></div>
+                                <div class="mb-2 small text-muted"> Prep: <b>${tPrep}m</b></div>
                                 <div class="progress mb-2" style="height: 5px;">
                                     <div class="progress-bar bg-success" style="width: ${pct}%"></div>
                                 </div>
