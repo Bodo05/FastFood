@@ -1,23 +1,28 @@
-// Recupera l'ID dal localStorage
 const userId = localStorage.getItem('_id');
-const API_URL = 'http://localhost:3000'; // Modifica se necessario
+const API_URL = 'http://localhost:3000';
 
-// --- 1. CARICAMENTO DATI ALL'AVVIO ---
+const validators = {
+    piva: (piva) => /^\d{11}$/.test(piva),
+    telefono: (tel) => /^\d{8,15}$/.test(tel)
+};
+
+// Funzione Helper Notifiche (usa alert se showToast non è disponibile globalmente)
+function msg(text) {
+    if(typeof showToast === 'function') showToast(text, 'warning');
+    else alert(text);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    // Controllo sicurezza: se non c'è ID, torna al login
     if (!userId) {
-        alert("Non sei loggato!");
-        window.location.href = 'gestioneRist.html';
+        alert("Sessione scaduta.");
+        window.location.href = 'login.html';
         return;
     }
 
     try {
-        // Chiama il backend per ottenere i dati attuali del ristoratore
         const response = await fetch(`${API_URL}/ristoratore/${userId}`);
-        
         if (response.ok) {
             const data = await response.json();
-            // Popola i campi del form con i dati ricevuti
             document.getElementById('nomeRistorante').value = data.nomeRistorante || '';
             document.getElementById('email').value = data.email || '';
             document.getElementById('indirizzo').value = data.indirizzo || '';
@@ -25,25 +30,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('piva').value = data.piva || '';
         } else {
             console.error("Errore fetch dati:", response.status);
-            alert("Impossibile caricare i dati del profilo.");
         }
     } catch (error) {
         console.error("Errore di connessione:", error);
     }
 });
 
-// --- 2. SALVATAGGIO MODIFICHE (PUT) ---
 const form = document.getElementById('formProfilo');
 if (form) {
     form.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Blocca il ricaricamento della pagina
+        e.preventDefault(); 
+
+        const nomeRist = document.getElementById('nomeRistorante').value.trim();
+        const piva = document.getElementById('piva').value.trim();
+        const telefono = document.getElementById('telefono').value.trim();
+        const indirizzo = document.getElementById('indirizzo').value.trim();
+        const email = document.getElementById('email').value.trim();
+
+        // Validazioni
+        if (!nomeRist || !indirizzo || !email || !piva) return msg("Compila i campi obbligatori.");
+        if (!validators.piva(piva)) return msg("La P.IVA deve essere di 11 cifre.");
+        if (telefono && !validators.telefono(telefono)) return msg("Telefono non valido.");
 
         const datiAggiornati = {
-            nomeRistorante: document.getElementById('nomeRistorante').value,
-            email: document.getElementById('email').value,
-            indirizzo: document.getElementById('indirizzo').value,
-            telefono: document.getElementById('telefono').value,
-            piva: document.getElementById('piva').value
+            nomeRistorante: nomeRist,
+            email: email,
+            indirizzo: indirizzo,
+            telefono: telefono,
+            piva: piva
         };
 
         try {
@@ -54,51 +68,36 @@ if (form) {
             });
 
             if (response.ok) {
-                alert("Profilo aggiornato con successo!");
+                if(typeof showToast === 'function') showToast("Profilo aggiornato!", "success");
+                else alert("Profilo aggiornato!");
             } else {
                 const err = await response.json();
-                alert("Errore aggiornamento: " + (err.message || "Sconosciuto"));
+                msg("Errore: " + (err.message || "Sconosciuto"));
             }
         } catch (error) {
-            console.error("Errore:", error);
-            alert("Errore di connessione al server.");
+            console.error(error);
+            msg("Errore di connessione.");
         }
     });
 }
 
-// --- 3. ELIMINAZIONE PROFILO (DELETE) ---
 const btnElimina = document.getElementById('btnElimina');
 if (btnElimina) {
     btnElimina.addEventListener('click', async () => {
-        if (!confirm("Sei sicuro di voler eliminare il tuo ristorante? Questa azione è irreversibile!")) {
-            return;
-        }
+        if (!confirm("Sei sicuro di voler eliminare l'account? Questa azione è irreversibile!")) return;
 
         try {
-            const response = await fetch(`${API_URL}/ristoratore/${userId}`, {
-                method: 'DELETE'
-            });
+            const response = await fetch(`${API_URL}/ristoratore/${userId}`, { method: 'DELETE' });
 
             if (response.ok) {
-                alert("Account eliminato. Verrai reindirizzato alla Home.");
-                logout(); // Pulisce sessione e reindirizza
+                alert("Account eliminato.");
+                localStorage.clear();
+                window.location.href = 'login.html';
             } else {
-                alert("Impossibile eliminare l'account.");
+                msg("Impossibile eliminare l'account.");
             }
         } catch (error) {
-            console.error("Errore:", error);
-            alert("Errore durante la cancellazione.");
+            msg("Errore durante la cancellazione.");
         }
     });
-}
-
-// --- 4. LOGOUT ---
-const btnLogout = document.getElementById('btnLogout');
-if (btnLogout) {
-    btnLogout.addEventListener('click', logout);
-}
-
-function logout() {
-    localStorage.clear();
-    window.location.href = 'login.html';
 }

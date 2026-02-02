@@ -2,23 +2,16 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coda Ordini - Ristoratore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        /* Colori personalizzati per gli stati dell'ordine */
-        .st-in_coda { background:#6c757d; color:white; }
-        .st-in_preparazione { background:#ffc107; color:black; }
-        .st-consegnato { background:#198754; color:white; }
-    </style>
+    <link href="common.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-    
     <div id="navbar-placeholder"></div>
-    
-    <div class="toast-container position-fixed top-0 end-0 p-3" id="toastPlaceHolder" style="z-index: 1055;"></div>
+    <div class="toast-box" id="toastPlaceHolder"></div>
 
-    <div class="container mt-4">
+    <main class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="fw-bold">Coda Ordini in Tempo Reale</h3>
             <span id="orologio" class="badge bg-dark fs-6 p-2"></span>
@@ -30,10 +23,11 @@
                 <p class="mt-2">Caricamento ordini...</p>
             </div>
         </div>
-    </div>
+    </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="utils.js"></script>
     <script src="navbar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="ordini_ristoratore.js"></script>
 </body>
 </html>

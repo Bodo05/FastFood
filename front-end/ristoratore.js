@@ -1,4 +1,6 @@
 const rId = localStorage.getItem('_id');
+const API_URL = 'http://localhost:3000';
+
 if(!rId || localStorage.getItem('userType') !== 'ristoratore') { 
     alert('Login richiesto'); 
     location.href='login.html'; 
@@ -8,22 +10,13 @@ async function loadMenu() {
     const cont = document.getElementById('menuContainer');
     if (!cont) return;
 
-    const rId = localStorage.getItem('_id');
-    
-    // Se non c'è l'ID, fermati subito e avvisa
-    if (!rId) {
-        cont.innerHTML = '<div class="alert alert-danger">Sessione scaduta. Rifai il login.</div>';
-        return;
-    }
-
     try {
-        const res = await fetch(`http://localhost:3000/ristoratore/${rId}/piatti`);
+        const res = await fetch(`${API_URL}/ristoratore/${rId}/piatti`);
         
         if (!res.ok) throw new Error('Errore server');
 
         const piatti = await res.json();
         
-        // Puliamo lo spinner
         cont.innerHTML = '';
 
         if (!piatti || piatti.length === 0) {
@@ -31,19 +24,18 @@ async function loadMenu() {
             return;
         }
 
-        // Se arriviamo qui, i dati ci sono
         piatti.forEach(p => {
             const card = document.createElement('div');
             card.className = 'col-md-3 mb-3';
             
-            // Gestione flessibile dei nomi campi (nome o strMeal)
             const nome = p.nome || p.strMeal || "Senza nome";
             const img = p.thumb || p.strMealThumb || 'https://via.placeholder.com/150';
             const prezzo = p.prezzo ? `€${parseFloat(p.prezzo).toFixed(2)}` : 'N/D';
 
             card.innerHTML = `
-                <div class="card h-100 shadow-sm">
-                    <img src="${img}" class="card-img-top" style="height:150px; object-fit:cover">
+                <div class="card h-100 shadow-sm border-0">
+                    <img src="${img}" class="card-img-top" style="height:150px; object-fit:cover"
+                         onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
                     <div class="card-body">
                         <h6 class="card-title fw-bold">${nome}</h6>
                         <p class="card-text text-primary">${prezzo}</p>
@@ -61,4 +53,4 @@ async function loadMenu() {
     }
 }
 
-loadMenu();
+document.addEventListener('DOMContentLoaded', loadMenu);

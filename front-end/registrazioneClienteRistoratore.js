@@ -2,23 +2,24 @@ let tipoUtente = 'cliente';
 let catalogoCompleto = [];
 let menuRistoratore = [];
 
-// --- FUNZIONE NOTIFICHE BOOTSTRAP DINAMICA ---
+const validators = {
+    email: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+    piva: (piva) => /^\d{11}$/.test(piva),
+    telefono: (tel) => /^\d{8,15}$/.test(tel),
+    password: (pass) => pass.length >= 6
+};
+
 function showToast(message, type = 'danger') {
     const container = document.getElementById('toastPlaceHolder');
-    if (!container) return alert(message); // Fallback
-
+    if (!container) return alert(message);
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `
       <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
-          <div class="toast-body fw-bold">
-            ${message}
-          </div>
+          <div class="toast-body fw-bold">${message}</div>
           <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
-      </div>
-    `;
-    
+      </div>`;
     container.appendChild(wrapper.firstElementChild);
     const toastEl = container.lastElementChild;
     new bootstrap.Toast(toastEl).show();
@@ -54,16 +55,15 @@ function cambiaTab(tipo) {
     const btnC = document.getElementById('btnTabCliente');
     const btnR = document.getElementById('btnTabRistoratore');
     
+    document.getElementById('divCliente').style.display = (tipo === 'cliente') ? 'block' : 'none';
+    document.getElementById('divRistoratore').style.display = (tipo === 'ristoratore') ? 'block' : 'none';
+
     if (tipo === 'cliente') {
         btnC.classList.add('active', 'btn-primary'); btnC.classList.remove('btn-outline-primary');
         btnR.classList.remove('active', 'btn-primary'); btnR.classList.add('btn-outline-primary'); 
-        document.getElementById('divCliente').style.display = 'block';
-        document.getElementById('divRistoratore').style.display = 'none';
     } else {
         btnR.classList.add('active', 'btn-primary'); btnR.classList.remove('btn-outline-primary');
         btnC.classList.remove('active', 'btn-primary'); btnC.classList.add('btn-outline-primary');
-        document.getElementById('divCliente').style.display = 'none';
-        document.getElementById('divRistoratore').style.display = 'block';
     }
 }
 
@@ -112,6 +112,7 @@ function aggiungiAlMenu(index, nome, cat, img) {
         return;
     }
 
+    // Cerchiamo ingredienti originali
     const piattoOriginale = catalogoCompleto.find(p => p.strMeal === nome) || {}; 
     let listaIngredienti = [];
     if (piattoOriginale.ingredients && Array.isArray(piattoOriginale.ingredients)) {
@@ -126,7 +127,9 @@ function aggiungiAlMenu(index, nome, cat, img) {
     menuRistoratore.push({
         nome: nome, categoria: cat, thumb: img,
         prezzo: parseFloat(prezzo), tempo: parseInt(tempo),
-        ingredienti: listaIngredienti.join(', ')
+        ingredienti: listaIngredienti.join(', '),
+        // Campi aggiuntivi per compatibilità backend
+        strMeal: nome, strCategory: cat, strMealThumb: img
     });
 
     const btn = document.getElementById(`btn_${index}`);
@@ -155,11 +158,12 @@ function aggiornaRiepilogo() {
 async function registrati() {
     const btn = document.getElementById('btnRegistra');
     const testoOriginale = btn.innerText;
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const pass = document.getElementById('pass').value;
     const conf = document.getElementById('confPass').value;
 
-    if (!email || !pass) { showToast("Compila i campi obbligatori", "warning"); return; }
+    if (!validators.email(email)) { showToast("Email non valida", "warning"); return; }
+    if (!validators.password(pass)) { showToast("Password min. 6 caratteri", "warning"); return; }
     if (pass !== conf) { showToast("Le password non coincidono", "warning"); return; }
 
     btn.disabled = true;
@@ -172,20 +176,22 @@ async function registrati() {
 
     if (tipoUtente === 'cliente') {
         urlDestinazione = 'http://localhost:3000/cliente';
-        const nome = document.getElementById('nome').value;
-        const cognome = document.getElementById('cognome').value;
+        const nome = document.getElementById('nome').value.trim();
+        const cognome = document.getElementById('cognome').value.trim();
         const pref = document.getElementById('prefCliente').value;
         
-        if(!nome) { showToast("Inserisci il nome", "warning"); resetBtn(); return; }
+        if(!nome || !cognome) { showToast("Inserisci nome e cognome", "warning"); resetBtn(); return; }
         payload.nome = nome; payload.cognome = cognome; payload.preferenze = [pref]; 
     } else {
         urlDestinazione = 'http://localhost:3000/ristoratore';
-        const nomeRist = document.getElementById('nomeRist').value;
-        const indirizzo = document.getElementById('indirizzo').value;
-        const piva = document.getElementById('piva').value;
-        const telefono = document.getElementById('telefono').value;
+        const nomeRist = document.getElementById('nomeRist').value.trim();
+        const indirizzo = document.getElementById('indirizzo').value.trim();
+        const piva = document.getElementById('piva').value.trim();
+        const telefono = document.getElementById('telefono').value.trim();
 
-        if(!nomeRist || !indirizzo || !piva) { showToast("Compila dati ristorante", "warning"); resetBtn(); return; }
+        if(!nomeRist || !indirizzo) { showToast("Dati ristorante incompleti", "warning"); resetBtn(); return; }
+        if(!validators.piva(piva)) { showToast("Partita IVA non valida (11 cifre)", "warning"); resetBtn(); return; }
+        if(telefono && !validators.telefono(telefono)) { showToast("Telefono non valido", "warning"); resetBtn(); return; }
         if(menuRistoratore.length === 0) { showToast("Aggiungi almeno un piatto!", "warning"); resetBtn(); return; }
 
         payload.nomeRistorante = nomeRist; payload.indirizzo = indirizzo;
@@ -199,7 +205,7 @@ async function registrati() {
         const data = await res.json();
 
         if (res.ok) {
-            showToast("Registrazione OK! Reindirizzamento...", "success");
+            showToast("Registrazione OK!", "success");
             setTimeout(() => window.location.href = 'login.html', 1500);
         } else {
             showToast(data.message || "Errore server", "danger");

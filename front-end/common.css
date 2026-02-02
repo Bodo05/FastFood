@@ -1,0 +1,53 @@
+/* Toast container standard */
+.toast-box {
+    position: fixed;
+    top: 0;
+    right: 0;
+    padding: 1rem;
+    z-index: 1055;
+}
+
+/* Cards */
+.card-clean {
+    border: 0;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-form {
+    border: 0;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    padding: 1.5rem;
+}
+
+/* Contenitori centrati */
+.center-form {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+}
+
+/* Sfondo login/registrazione */
+.bg-auth {
+    background-color: #e6f7ff;
+}
+
+/* Stato ordini */
+.st-in_coda { 
+    background: #6c757d; 
+    color: white; 
+}
+
+.st-in_preparazione { 
+    background: #ffc107; 
+    color: black; 
+}
+
+.st-consegnato { 
+    background: #198754; 
+    color: white; 
+}
+
+/* Utility */
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }

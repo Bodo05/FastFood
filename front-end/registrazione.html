@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrazione - FastFood</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="common.css" rel="stylesheet">
 </head>
-<body style="background-color: #e6f7ff;">
-
+<body class="bg-auth">
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
             <a class="navbar-brand" href="login.html">FastFood Project</a>
@@ -15,9 +15,9 @@
         </div>
     </nav>
 
-    <div class="toast-container position-fixed top-0 end-0 p-3" id="toastPlaceHolder" style="z-index: 1055;"></div>
+    <div class="toast-box" id="toastPlaceHolder"></div>
 
-    <div class="container pb-5">
+    <main class="container pb-5">
         <div class="row justify-content-center">
             <div class="col-lg-10">
                 <div class="text-center mb-4">
@@ -34,7 +34,7 @@
                     </li>
                 </ul>
 
-                <div class="card shadow-sm border-0">
+                <div class="card card-clean">
                     <div class="card-body p-4">
                         <h5 class="mb-3 border-bottom pb-2">Credenziali di Accesso</h5>
                         <div class="row g-3 mb-4">
@@ -61,8 +61,14 @@
                         <div id="divCliente">
                             <h5 class="mb-3 border-bottom pb-2">I tuoi Dati</h5>
                             <div class="row g-3">
-                                <div class="col-md-6"><label class="form-label">Nome</label><input type="text" class="form-control" id="nome"></div>
-                                <div class="col-md-6"><label class="form-label">Cognome</label><input type="text" class="form-control" id="cognome"></div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Nome</label>
+                                    <input type="text" class="form-control" id="nome">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Cognome</label>
+                                    <input type="text" class="form-control" id="cognome">
+                                </div>
                                 <div class="col-12">
                                     <label class="form-label">Categoria Preferita</label>
                                     <select class="form-select" id="prefCliente"><option value="">Caricamento...</option></select>
@@ -73,10 +79,22 @@
                         <div id="divRistoratore" style="display: none;">
                             <h5 class="mb-3 border-bottom pb-2">Dati Attività</h5>
                             <div class="row g-3 mb-4">
-                                <div class="col-md-6"><label class="form-label">Nome Ristorante</label><input type="text" class="form-control" id="nomeRist"></div>
-                                <div class="col-md-6"><label class="form-label">Partita IVA</label><input type="text" class="form-control" id="piva"></div>
-                                <div class="col-md-6"><label class="form-label">Indirizzo Completo</label><input type="text" class="form-control" id="indirizzo" placeholder="Via Roma 10, Milano"></div>
-                                <div class="col-md-6"><label class="form-label">Telefono</label><input type="text" class="form-control" id="telefono"></div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Nome Ristorante</label>
+                                    <input type="text" class="form-control" id="nomeRist">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Partita IVA</label>
+                                    <input type="text" class="form-control" id="piva">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Indirizzo Completo</label>
+                                    <input type="text" class="form-control" id="indirizzo" placeholder="Via Roma 10, Milano">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Telefono</label>
+                                    <input type="text" class="form-control" id="telefono">
+                                </div>
                             </div>
 
                             <div class="alert alert-info">
@@ -110,8 +128,9 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
+    <script src="utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="registrazioneClienteRistoratore.js"></script>
 </body>

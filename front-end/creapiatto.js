@@ -4,35 +4,42 @@
 
 const API_URL = 'http://localhost:3000';
 const rId = localStorage.getItem('_id'); 
-
-// Recupera parametri URL
 const urlParams = new URLSearchParams(window.location.search);
 const piattoId = urlParams.get('piattoId');
 
+// Array locale per gestire gli ingredienti prima del salvataggio
+let ingredientiTemp = [];
+
+// Funzione Notifiche (riutilizziamo quella globale se c'è, altrimenti alert)
+function notifica(msg, tipo='success') {
+    if(typeof showToast === 'function') showToast(msg, tipo);
+    else alert(msg);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    // Sicurezza
+    // 1. Sicurezza
     if (!rId || localStorage.getItem('userType') !== 'ristoratore') {
         window.location.href = 'login.html';
         return;
     }
 
-    // Modalità MODIFICA
+    // 2. Gestione Modalità (Modifica o Creazione)
     if (piattoId) {
         document.getElementById('formTitle').innerText = "Modifica Piatto";
-        document.getElementById('btnSubmit').innerText = "Salva Modifiche";
-        // L'API per ottenere il singolo piatto non esiste specifica nel backend fornito
-        // quindi dobbiamo cercare tra i piatti del ristoratore quello giusto
+        document.getElementById('btnSalva').innerText = "Salva Modifiche";
         await caricaDatiPiatto(piattoId);
     }
+
+    // 3. Gestione Anteprima Immagine
+    document.getElementById('foto').addEventListener('input', aggiornaPreview);
 });
 
+// Funzione per caricare i dati in fase di modifica
 async function caricaDatiPiatto(pId) {
     try {
-        // Usiamo l'endpoint che restituisce TUTTI i piatti del ristoratore e filtriamo in JS
-        // (Perché nel tuo index.js non c'è una rotta GET /piatti/:id singola pubblica o privata facile)
+        // Poiché non esiste una rotta GET /piatti/:id pubblica singola, 
+        // prendiamo tutti i piatti del ristoratore e filtriamo.
         const res = await fetch(`${API_URL}/ristoratore/${rId}/piatti`);
-        if (!res.ok) throw new Error("Errore recupero piatti");
-        
         const menu = await res.json();
         const p = menu.find(item => item._id === pId);
 
@@ -40,68 +47,137 @@ async function caricaDatiPiatto(pId) {
             document.getElementById('nome').value = p.nome || p.strMeal || '';
             document.getElementById('prezzo').value = p.prezzo || '';
             document.getElementById('categoria').value = p.categoria || p.strCategory || '';
-            document.getElementById('descrizione').value = p.descrizione || '';
-            document.getElementById('thumb').value = p.thumb || p.strMealThumb || '';
+            document.getElementById('foto').value = p.thumb || p.strMealThumb || '';
+            document.getElementById('tempo').value = p.tempo || '15';
+            
+            // Gestione Ingredienti
+            // Il backend potrebbe averli salvati come stringa o array, gestiamo entrambi
+            if(p.ingredienti) {
+                if(Array.isArray(p.ingredienti)) ingredientiTemp = p.ingredienti;
+                else ingredientiTemp = p.ingredienti.split(',').map(s => s.trim());
+            } else if (p.ingredients) {
+                 ingredientiTemp = p.ingredients;
+            }
+            
+            renderIngredienti();
+            aggiornaPreview();
         } else {
-            alert("Piatto non trovato nel tuo menu.");
-            window.location.href = 'ristoratore.html';
+            notifica("Piatto non trovato.", "danger");
+            setTimeout(() => window.location.href = 'ristoratore.html', 1500);
         }
-        
     } catch (err) {
         console.error(err);
-        alert("Errore caricamento dati.");
+        notifica("Errore caricamento dati.", "danger");
     }
 }
 
-document.getElementById('formPiatto').addEventListener('submit', async (e) => {
-    e.preventDefault();
+// Funzione per aggiornare l'immagine di anteprima
+function aggiornaPreview() {
+    const url = document.getElementById('foto').value;
+    const img = document.getElementById('previewImg');
+    if (url) {
+        img.src = url;
+        img.onerror = () => { img.src = 'https://via.placeholder.com/150?text=Err+Img'; };
+    } else {
+        img.src = 'https://via.placeholder.com/150';
+    }
+}
 
-    // Preparazione dati
-    const rawData = {
-        nome: document.getElementById('nome').value,
-        prezzo: parseFloat(document.getElementById('prezzo').value),
-        categoria: document.getElementById('categoria').value,
-        descrizione: document.getElementById('descrizione').value,
-        thumb: document.getElementById('thumb').value,
-        // Altri campi necessari per coerenza
-        strMeal: document.getElementById('nome').value, 
-        strCategory: document.getElementById('categoria').value,
-        strMealThumb: document.getElementById('thumb').value
+// Funzione chiamata dal pulsante "+" dell'HTML
+function aggiungiIngrediente() {
+    const input = document.getElementById('ingrediente');
+    const val = input.value.trim();
+    if (val) {
+        ingredientiTemp.push(val);
+        input.value = '';
+        renderIngredienti();
+    }
+}
+
+// Renderizza la lista visuale degli ingredienti
+function renderIngredienti() {
+    const div = document.getElementById('listaIngredienti');
+    if (ingredientiTemp.length === 0) {
+        div.innerHTML = '<small class="text-muted">Nessun ingrediente.</small>';
+        return;
+    }
+    
+    div.innerHTML = '';
+    ingredientiTemp.forEach((ing, index) => {
+        const span = document.createElement('span');
+        span.className = 'badge bg-secondary me-1 mb-1';
+        span.innerHTML = `${ing} <i class="bi bi-x-circle" style="cursor:pointer; margin-left:5px;" onclick="rimuoviIngrediente(${index})">x</i>`;
+        // Nota: onclick inline richiede che rimuoviIngrediente sia globale
+        span.querySelector('i').onclick = () => rimuoviIngrediente(index);
+        div.appendChild(span);
+    });
+}
+
+function rimuoviIngrediente(index) {
+    ingredientiTemp.splice(index, 1);
+    renderIngredienti();
+}
+
+// Funzione chiamata dal pulsante "Seleziona" del catalogo comune
+function selezionaDaCatalogo() {
+    // Questa funzione richiede che l'HTML del catalogo sia popolato.
+    // Se non implementata, la lasciamo vuota o la completiamo se serve.
+    // (Nel tuo codice HTML c'era una select, ma mancava la logica di popolamento qui).
+}
+
+// --- FUNZIONE PRINCIPALE DI SALVATAGGIO ---
+async function salvaPiatto() {
+    const nome = document.getElementById('nome').value.trim();
+    const prezzo = parseFloat(document.getElementById('prezzo').value);
+    const tempo = document.getElementById('tempo').value;
+    const categoria = document.getElementById('categoria').value.trim();
+    const thumb = document.getElementById('foto').value.trim();
+
+    // 1. Validazioni
+    if (!nome) return notifica("Inserisci il nome del piatto", "warning");
+    if (isNaN(prezzo) || prezzo <= 0) return notifica("Prezzo non valido", "warning");
+    if (!categoria) return notifica("Inserisci una categoria", "warning");
+
+    // 2. Preparazione Payload
+    // Il backend si aspetta { piatto: { ... } }
+    const datiPiatto = {
+        nome: nome,
+        prezzo: prezzo,
+        categoria: categoria,
+        thumb: thumb,
+        tempo: tempo,
+        descrizione: document.getElementById('descrizione')?.value || "", // se presente
+        ingredienti: ingredientiTemp.join(', '), // Salviamo come stringa per semplicità nel DB
+        // Campi compatibilità catalogo
+        strMeal: nome,
+        strCategory: categoria,
+        strMealThumb: thumb
     };
 
-    // COSTRUZIONE URL E BODY CORRETTI PER IL TUO BACKEND
-    let url, method;
+    let url = `${API_URL}/ristoratore/${rId}/piatti`;
+    let method = 'POST';
 
     if (piattoId) {
-        // UPDATE: PUT /ristoratore/:rId/piatti/:pId
         url = `${API_URL}/ristoratore/${rId}/piatti/${piattoId}`;
         method = 'PUT';
-    } else {
-        // CREATE: POST /ristoratore/:id/piatti
-        url = `${API_URL}/ristoratore/${rId}/piatti`;
-        method = 'POST';
     }
-
-    // NOTA BENE: Nel tuo index.js leggi "req.body.piatto".
-    // Quindi dobbiamo avvolgere i dati in un oggetto "piatto".
-    const payload = { piatto: rawData };
 
     try {
         const res = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ piatto: datiPiatto })
         });
 
         if (res.ok) {
-            alert(piattoId ? "Piatto aggiornato!" : "Piatto aggiunto al menu!");
-            window.location.href = 'ristoratore.html';
+            notifica(piattoId ? "Piatto aggiornato!" : "Piatto creato!", "success");
+            setTimeout(() => window.location.href = 'ristoratore.html', 1500);
         } else {
-            const errData = await res.json();
-            alert("Errore: " + (errData.message || "Sconosciuto"));
+            const err = await res.json();
+            notifica("Errore: " + (err.message || "Salvataggio fallito"), "danger");
         }
     } catch (err) {
         console.error(err);
-        alert("Errore di connessione al server.");
+        notifica("Errore di connessione.", "danger");
     }
-});
+}
