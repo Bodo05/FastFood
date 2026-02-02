@@ -36,7 +36,7 @@ async function caricaPiattoEsistente(pId) {
 
         document.getElementById('formTitle').innerText = `Modifica: ${piatto.nome}`;
         document.getElementById('titlePage').innerText = `Modifica Piatto`;
-        document.getElementById('btnSalva').innerText = `💾 Salva Modifiche`;
+        document.getElementById('btnSalva').innerText = `Salva Modifiche`;
         document.getElementById('btnSalva').classList.remove('btn-success');
         document.getElementById('btnSalva').classList.add('btn-warning', 'text-dark');
         
