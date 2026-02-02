@@ -58,9 +58,9 @@ function calcolaDistanza(lat1, lon1, lat2, lon2) {
 }
 
 
-// ---------------------------------------------------------
-//                  AVVIO SERVER
-// ---------------------------------------------------------
+// ==========================================
+//             AVVIO SERVER
+// ==========================================
 
 async function startServer() {
     try {
@@ -114,7 +114,7 @@ startServer();
 
 
 // ==========================================
-// SEZIONE 1: CLIENTI
+//                 CLIENTI
 // ==========================================
 
 
@@ -195,7 +195,7 @@ app.delete("/cliente/:id", async (req, res) => {
 
 
 // ==========================================
-// SEZIONE 2: RISTORATORI
+//                RISTORATORI
 // ==========================================
 
 app.post("/ristoratore", async (req, res) => {
@@ -313,7 +313,7 @@ app.delete("/ristoratore/:id", async (req, res) => {
 
 
 // ==========================================
-// SEZIONE 3: LOGIN
+//                  LOGIN
 // ==========================================
 
 app.post("/cliente/login", async (req, res) => {
@@ -353,7 +353,7 @@ app.post("/ristoratore/login", async (req, res) => {
 
 
 // ==========================================
-// SEZIONE 4: MENU E CATALOGO
+//              MENU E CATALOGO
 // ==========================================
 
 app.get("/meals", async (req, res) => {
@@ -456,7 +456,7 @@ app.put("/ristoratore/:rId/piatti/:pId", async (req, res) => {
 
 
 // ==========================================
-// SEZIONE 5: RICERCA (Fix Vedi Menu)
+//                RICERCA
 // ==========================================
 
 // 1. Ricerca Generale
@@ -585,7 +585,7 @@ app.get("/ricerca/piatto-ristorante", async (req, res) => {
 
 
 // ==========================================
-// SEZIONE 6: ORDINI
+//                  ORDINI
 // ==========================================
 
 app.post("/ordine", async (req, res) => {

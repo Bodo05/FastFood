@@ -19,18 +19,22 @@
 
         async function loadStats() {
             try {
+                // prendo i dati delle statistiche dall'endpoint dedicato
                 const res = await fetch(`http://localhost:3000/ristoratore/${rId}/statistiche`);
                 const data = await res.json();
 
-                document.getElementById('totaleGuadagni').innerText = data.totaleGuadagni.toFixed(2);
+                //aggiornamento elementi con il testo preso tramite api
+                document.getElementById('totaleGuadagni').innerText = data.totaleGuadagni.toFixed(2); //guadagno con 2 decimali
                 document.getElementById('numeroOrdini').innerText = data.numeroOrdini;
 
                 const list = document.getElementById('listaPopolari');
                 list.innerHTML = '';
                 
+                // se 0 ordini
                 if(data.classificaPiatti.length === 0) {
                     list.innerHTML = '<li class="list-group-item text-muted">Nessun dato disponibile.</li>';
                 } else {
+                    // scorro i la classifica dei paitti
                     data.classificaPiatti.forEach((p, i) => {
                         const badge = i === 0 ? '🥇' : (i === 1 ? '🥈' : '🥉');
                         const li = document.createElement('li');

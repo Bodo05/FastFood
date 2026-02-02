@@ -1,6 +1,5 @@
 const rId = localStorage.getItem('_id');
 if(!rId || localStorage.getItem('userType') !== 'ristoratore') { 
-    // Fallback se showToast non esiste ancora (es. redirect immediato)
     alert('Login richiesto'); 
     location.href='login.html'; 
 }
@@ -28,5 +27,5 @@ async function loadMenu(){
     if(typeof showToast === 'function') showToast('Errore caricamento', 'danger');
   }
 }
-// Chiamata automatica solo se necessario, ma meglio gestirla nell'HTML specifico
-// loadMenu();
+// avvia caricamento al caricamento della pagina
+document.addEventListener('DOMContentLoaded', loadMenu);

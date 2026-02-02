@@ -1,5 +1,5 @@
 // Recupera l'ID dal localStorage
-const userId = localStorage.getItem('userId');
+const userId = localStorage.getItem('_id');
 const API_URL = 'http://localhost:3000'; // Modifica se necessario
 
 // --- 1. CARICAMENTO DATI ALL'AVVIO ---
@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Controllo sicurezza: se non c'è ID, torna al login
     if (!userId) {
         alert("Non sei loggato!");
-        window.location.href = 'index.html';
+        window.location.href = 'gestioneRist.html';
         return;
     }
 
@@ -100,5 +100,5 @@ if (btnLogout) {
 
 function logout() {
     localStorage.clear();
-    window.location.href = 'index.html';
+    window.location.href = 'login.html';
 }
