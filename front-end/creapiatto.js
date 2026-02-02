@@ -1,190 +1,107 @@
-const rId = localStorage.getItem('_id');
-if (!rId || localStorage.getItem('userType') !== 'ristoratore') {
-    window.location.href = 'login.html';
-}
+/**
+ * GESTIONE PIATTO (CREAZIONE E MODIFICA)
+ */
 
-let ingredienti = [];
-let catalogoGlobal = []; 
-let piattoInModificaId = null;
+const API_URL = 'http://localhost:3000';
+const rId = localStorage.getItem('_id'); 
+
+// Recupera parametri URL
+const urlParams = new URLSearchParams(window.location.search);
+const piattoId = urlParams.get('piattoId');
 
 document.addEventListener('DOMContentLoaded', async () => {
-    aggiornaListaIngredienti();
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const pId = urlParams.get('piattoId');
-
-    if (pId) {
-        piattoInModificaId = pId;
-        await caricaPiattoEsistente(pId);
-        document.getElementById('catalogoImport').style.display = 'none';
-    } else {
-        await caricaCatalogo();
+    // Sicurezza
+    if (!rId || localStorage.getItem('userType') !== 'ristoratore') {
+        window.location.href = 'login.html';
+        return;
     }
-    
-    document.getElementById('ingrediente').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); aggiungiIngrediente(); }
-    });
+
+    // Modalità MODIFICA
+    if (piattoId) {
+        document.getElementById('formTitle').innerText = "Modifica Piatto";
+        document.getElementById('btnSubmit').innerText = "Salva Modifiche";
+        // L'API per ottenere il singolo piatto non esiste specifica nel backend fornito
+        // quindi dobbiamo cercare tra i piatti del ristoratore quello giusto
+        await caricaDatiPiatto(piattoId);
+    }
 });
 
-async function caricaPiattoEsistente(pId) {
+async function caricaDatiPiatto(pId) {
     try {
-        const res = await fetch(`http://localhost:3000/ristoratore/${rId}/piatti`);
-        const piatti = await res.json();
-        const piatto = piatti.find(p => p._id === pId);
-
-        if (!piatto) throw new Error('Piatto non trovato nel menu.');
-
-        document.getElementById('formTitle').innerText = `Modifica: ${piatto.nome}`;
-        document.getElementById('titlePage').innerText = `Modifica Piatto`;
-        document.getElementById('btnSalva').innerText = `Salva Modifiche`;
-        document.getElementById('btnSalva').classList.remove('btn-success');
-        document.getElementById('btnSalva').classList.add('btn-warning', 'text-dark');
+        // Usiamo l'endpoint che restituisce TUTTI i piatti del ristoratore e filtriamo in JS
+        // (Perché nel tuo index.js non c'è una rotta GET /piatti/:id singola pubblica o privata facile)
+        const res = await fetch(`${API_URL}/ristoratore/${rId}/piatti`);
+        if (!res.ok) throw new Error("Errore recupero piatti");
         
-        document.getElementById('nome').value = piatto.nome;
-        document.getElementById('prezzo').value = piatto.prezzo;
-        document.getElementById('tempo').value = piatto.tempo;
-        document.getElementById('categoria').value = piatto.categoria;
-        document.getElementById('foto').value = piatto.thumb;
-        aggiornaPreview();
+        const menu = await res.json();
+        const p = menu.find(item => item._id === pId);
 
-        if (piatto.ingredienti) {
-            ingredienti = piatto.ingredienti.split(',').map(s => s.trim()).filter(s => s);
-        } else if (piatto.ingredients && Array.isArray(piatto.ingredients)) {
-             ingredienti = piatto.ingredients;
+        if (p) {
+            document.getElementById('nome').value = p.nome || p.strMeal || '';
+            document.getElementById('prezzo').value = p.prezzo || '';
+            document.getElementById('categoria').value = p.categoria || p.strCategory || '';
+            document.getElementById('descrizione').value = p.descrizione || '';
+            document.getElementById('thumb').value = p.thumb || p.strMealThumb || '';
+        } else {
+            alert("Piatto non trovato nel tuo menu.");
+            window.location.href = 'ristoratore.html';
         }
-
-        aggiornaListaIngredienti();
-
-    } catch (err) {
-        showToast('Errore nel caricamento del piatto', 'danger');
-    }
-}
-
-async function caricaCatalogo() {
-    try {
-        const res = await fetch('http://localhost:3000/catalog');
-        if(!res.ok) throw new Error('Errore catalogo');
         
-        catalogoGlobal = await res.json();
-        
-        const select = document.getElementById('selectCatalogo');
-        catalogoGlobal.sort((a,b) => (a.strMeal || '').localeCompare(b.strMeal || ''));
-        
-        catalogoGlobal.forEach((piatto, index) => {
-            const option = document.createElement('option');
-            option.value = index; 
-            option.text = piatto.strMeal;
-            select.appendChild(option);
-        });
     } catch (err) {
         console.error(err);
+        alert("Errore caricamento dati.");
     }
 }
 
-function selezionaDaCatalogo() {
-    const index = document.getElementById('selectCatalogo').value;
-    if (index === "") return;
+document.getElementById('formPiatto').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-    const p = catalogoGlobal[index];
-    
-    document.getElementById('nome').value = p.strMeal;
-    document.getElementById('categoria').value = p.strCategory;
-    document.getElementById('foto').value = p.strMealThumb;
-    document.getElementById('previewImg').src = p.strMealThumb;
-    
-    ingredienti = [];
-    if(p.ingredients && Array.isArray(p.ingredients)) {
-        ingredienti = [...p.ingredients];
-    } else {
-        for(let i=1; i<=20; i++) {
-            const ing = p[`strIngredient${i}`];
-            if(ing && ing.trim()) ingredienti.push(ing);
-        }
-    }
-    aggiornaListaIngredienti();
-    document.getElementById('prezzo').focus();
-}
-
-function aggiornaPreview() {
-    const url = document.getElementById('foto').value;
-    document.getElementById('previewImg').src = url || 'https://via.placeholder.com/150';
-}
-
-function aggiungiIngrediente() {
-    const input = document.getElementById('ingrediente');
-    const val = input.value.trim();
-    if (val && !ingredienti.includes(val)) {
-        ingredienti.push(val);
-        aggiornaListaIngredienti();
-        input.value = '';
-    }
-}
-
-function aggiornaListaIngredienti() {
-    const div = document.getElementById('listaIngredienti');
-    if (ingredienti.length === 0) {
-        div.innerHTML = '<small class="text-muted">Nessun ingrediente.</small>';
-        return;
-    }
-    div.innerHTML = ingredienti.map((ing, i) => 
-        `<span class="badge bg-secondary me-1 mb-1">${ing} <span style="cursor:pointer" onclick="rimuoviIng(${i})">&times;</span></span>`
-    ).join('');
-}
-
-function rimuoviIng(i) {
-    ingredienti.splice(i, 1);
-    aggiornaListaIngredienti();
-}
-
-async function salvaPiatto() {
-    const nome = document.getElementById('nome').value;
-    const prezzo = parseFloat(document.getElementById('prezzo').value);
-    const tempo = parseInt(document.getElementById('tempo').value);
-    const categoria = document.getElementById('categoria').value;
-    const foto = document.getElementById('foto').value;
-    const btn = document.getElementById('btnSalva');
-    
-    if (!nome || !prezzo || !categoria) {
-        showToast('Compila almeno Nome, Prezzo e Categoria', 'danger');
-        return;
-    }
-    
-    btn.disabled = true;
-
-    const piattoPayload = {
-        nome, prezzo, tempo, categoria,
-        ingredienti: ingredienti.join(', '), 
-        thumb: foto || 'https://via.placeholder.com/150'
+    // Preparazione dati
+    const rawData = {
+        nome: document.getElementById('nome').value,
+        prezzo: parseFloat(document.getElementById('prezzo').value),
+        categoria: document.getElementById('categoria').value,
+        descrizione: document.getElementById('descrizione').value,
+        thumb: document.getElementById('thumb').value,
+        // Altri campi necessari per coerenza
+        strMeal: document.getElementById('nome').value, 
+        strCategory: document.getElementById('categoria').value,
+        strMealThumb: document.getElementById('thumb').value
     };
 
-    let url;
-    let method;
-    
-    if (piattoInModificaId) {
-        url = `http://localhost:3000/ristoratore/${rId}/piatti/${piattoInModificaId}`;
+    // COSTRUZIONE URL E BODY CORRETTI PER IL TUO BACKEND
+    let url, method;
+
+    if (piattoId) {
+        // UPDATE: PUT /ristoratore/:rId/piatti/:pId
+        url = `${API_URL}/ristoratore/${rId}/piatti/${piattoId}`;
         method = 'PUT';
     } else {
-        url = `http://localhost:3000/ristoratore/${rId}/piatti`;
+        // CREATE: POST /ristoratore/:id/piatti
+        url = `${API_URL}/ristoratore/${rId}/piatti`;
         method = 'POST';
     }
+
+    // NOTA BENE: Nel tuo index.js leggi "req.body.piatto".
+    // Quindi dobbiamo avvolgere i dati in un oggetto "piatto".
+    const payload = { piatto: rawData };
 
     try {
         const res = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ piatto: piattoPayload })
+            body: JSON.stringify(payload)
         });
 
         if (res.ok) {
-            showToast(`Piatto ${method === 'PUT' ? 'modificato' : 'aggiunto'} con successo!`, 'success');
-            setTimeout(() => window.location.href = 'ristoratore.html', 1500);
+            alert(piattoId ? "Piatto aggiornato!" : "Piatto aggiunto al menu!");
+            window.location.href = 'ristoratore.html';
         } else {
-            const data = await res.json();
-            showToast(`Errore: ${data.message || res.status}`, 'danger');
+            const errData = await res.json();
+            alert("Errore: " + (errData.message || "Sconosciuto"));
         }
     } catch (err) {
-        showToast('Errore di connessione', 'danger');
-    } finally {
-        btn.disabled = false;
+        console.error(err);
+        alert("Errore di connessione al server.");
     }
-}
+});

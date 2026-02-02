@@ -4,28 +4,61 @@ if(!rId || localStorage.getItem('userType') !== 'ristoratore') {
     location.href='login.html'; 
 }
 
-async function loadMenu(){
-  try {
-    const res = await fetch(`http://localhost:3000/ristoratore/${rId}`);
-    if(!res.ok) { 
-        if(typeof showToast === 'function') showToast('Errore caricamento menu', 'danger');
-        return; 
-    }
-    const r = await res.json();
-    const cont = document.getElementById('menuContainer'); 
-    if(!cont) return; // Se non siamo nella pagina giusta
+async function loadMenu() {
+    const cont = document.getElementById('menuContainer');
+    if (!cont) return;
 
-    cont.innerHTML = '';
-    (r.piatti || []).forEach(p => {
-      const card = document.createElement('div'); card.className='card m-2'; card.style.width='180px';
-      card.innerHTML = `<img src="${p.thumb||''}" style="height:100px;object-fit:cover" class="card-img-top">
-        <div class="card-body p-2"><strong>${p.nome}</strong><div>€${p.price ?? '-'}</div><div>${p.prepTime ?? '-'} min</div></div>`;
-      cont.appendChild(card);
-    });
-  } catch (err) { 
-    console.error(err); 
-    if(typeof showToast === 'function') showToast('Errore caricamento', 'danger');
-  }
+    const rId = localStorage.getItem('_id');
+    
+    // Se non c'è l'ID, fermati subito e avvisa
+    if (!rId) {
+        cont.innerHTML = '<div class="alert alert-danger">Sessione scaduta. Rifai il login.</div>';
+        return;
+    }
+
+    try {
+        const res = await fetch(`http://localhost:3000/ristoratore/${rId}/piatti`);
+        
+        if (!res.ok) throw new Error('Errore server');
+
+        const piatti = await res.json();
+        
+        // Puliamo lo spinner
+        cont.innerHTML = '';
+
+        if (!piatti || piatti.length === 0) {
+            cont.innerHTML = '<div class="col-12 text-center"><h5>Nessun piatto trovato nel menu.</h5></div>';
+            return;
+        }
+
+        // Se arriviamo qui, i dati ci sono
+        piatti.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'col-md-3 mb-3';
+            
+            // Gestione flessibile dei nomi campi (nome o strMeal)
+            const nome = p.nome || p.strMeal || "Senza nome";
+            const img = p.thumb || p.strMealThumb || 'https://via.placeholder.com/150';
+            const prezzo = p.prezzo ? `€${parseFloat(p.prezzo).toFixed(2)}` : 'N/D';
+
+            card.innerHTML = `
+                <div class="card h-100 shadow-sm">
+                    <img src="${img}" class="card-img-top" style="height:150px; object-fit:cover">
+                    <div class="card-body">
+                        <h6 class="card-title fw-bold">${nome}</h6>
+                        <p class="card-text text-primary">${prezzo}</p>
+                    </div>
+                    <div class="card-footer bg-white border-0 d-grid pb-3">
+                        <a href="creapiatto.html?piattoId=${p._id}" class="btn btn-sm btn-outline-primary">Modifica</a>
+                    </div>
+                </div>`;
+            cont.appendChild(card);
+        });
+
+    } catch (err) {
+        console.error("Errore:", err);
+        cont.innerHTML = '<div class="alert alert-danger">Impossibile caricare i dati. Il server è acceso?</div>';
+    }
 }
-// avvia caricamento al caricamento della pagina
-document.addEventListener('DOMContentLoaded', loadMenu);
+
+loadMenu();
