@@ -49,7 +49,7 @@ async function login() {
 
     // Determina l'URL corretto in base al tipo
     const baseUrl = 'http://localhost:3000'; 
-    const endpoint = type === 'ristoratore' ? `${baseUrl}/ristoratore/login` : `${baseUrl}/auth/login`;
+    const endpoint = type === 'ristoratore' ? `${baseUrl}/ristoratore/login` : `${baseUrl}/cliente/login`;
     
     const payload = { email, password, type };
 

@@ -53,7 +53,7 @@ window.onload = async () => {
             
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <span class="h5 mb-0 text-primary">${prezzo}</span>
-                <small class="text-muted">⏱ ${tempo}</small>
+                <small class="text-muted"> ${tempo}</small>
             </div>
 
             <p class="card-text small text-secondary text-truncate">${p.ingredienti || ''}</p>

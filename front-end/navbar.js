@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <li class="nav-item"><a class="nav-link" href="ordini_ristoratore.html">Ordini</a></li>
             <li class="nav-item"><a class="nav-link" href="creapiatto.html">Nuovo Piatto</a></li>
             <li class="nav-item"><a class="nav-link" href="statistiche.html">Statistiche</a></li>
+            <li class="nav-item"><a class="nav-link" href="profilo_rist.html">Profilo</a></li>
         `;
     } 
     // 2. CONFIGURAZIONE NAVBAR PER CLIENTE
