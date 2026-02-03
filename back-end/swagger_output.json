@@ -13,7 +13,7 @@
   "paths": {
     "/cliente": {
       "post": {
-        "description": "Registrazione utente con i seguenti parametri: nome, cognome, email, password, preferenze e data registrazione",
+        "description": "Registrazione utente",
         "parameters": [
           {
             "name": "body",
@@ -58,7 +58,7 @@
     },
     "/cliente/{id}": {
       "get": {
-        "description": "Recupera dal database le informazioni di un cliente in base al suo id",
+        "description": "Recupera cliente",
         "parameters": [
           {
             "name": "id",
@@ -80,7 +80,7 @@
         }
       },
       "put": {
-        "description": "Aggiorna i dati di un cliente in base al suo id",
+        "description": "Aggiorna cliente",
         "parameters": [
           {
             "name": "id",
@@ -99,7 +99,7 @@
         }
       },
       "delete": {
-        "description": "Cancellazione del cliente dal database utilizzando il suo id",
+        "description": "Elimina cliente",
         "parameters": [
           {
             "name": "id",
@@ -120,7 +120,7 @@
     },
     "/ristoratore": {
       "post": {
-        "description": "Registrazione ristoratore inserendo i seguenti parametri: nomeRistorante, email, password, indirizzo, p. iva, latitudine, longitudine, piatti e data registrazione",
+        "description": "Registrazione ristoratore",
         "parameters": [
           {
             "name": "body",
@@ -171,7 +171,7 @@
     },
     "/ristoratore/{id}": {
       "get": {
-        "description": "Recupera dal database le informazioni del ristoratore secondo il suo id",
+        "description": "Recupera ristoratore",
         "parameters": [
           {
             "name": "id",
@@ -190,7 +190,7 @@
         }
       },
       "put": {
-        "description": "Aggiorna i dati del ristorante (nome, indirizzo, piva, ecc).",
+        "description": "Aggiorna ristoratore",
         "parameters": [
           {
             "name": "id",
@@ -209,7 +209,7 @@
         }
       },
       "delete": {
-        "description": "Rimuove definitivamente il profilo del ristoratore dal sistema.",
+        "description": "Elimina ristoratore",
         "parameters": [
           {
             "name": "id",
@@ -233,7 +233,7 @@
     },
     "/cliente/login": {
       "post": {
-        "description": "Login cliente usando email e password",
+        "description": "Login cliente",
         "parameters": [
           {
             "name": "body",
@@ -266,7 +266,7 @@
     },
     "/ristoratore/login": {
       "post": {
-        "description": "Login ristoratore secondo email e password",
+        "description": "Login ristoratore",
         "parameters": [
           {
             "name": "body",
@@ -299,7 +299,7 @@
     },
     "/meals": {
       "get": {
-        "description": "Restituisce la lista pubblica di tutti i piatti attualmente in vendita nei ristoranti.",
+        "description": "Lista pubblica piatti",
         "responses": {
           "200": {
             "description": "OK"
@@ -312,7 +312,7 @@
     },
     "/catalog": {
       "get": {
-        "description": "Restituisce il catalogo globale dei piatti standard (da meal.json) per l'importazione.",
+        "description": "Catalogo globale",
         "responses": {
           "200": {
             "description": "OK"
@@ -325,7 +325,7 @@
     },
     "/categorie-catalogo": {
       "get": {
-        "description": "Restituisce l'elenco delle categorie di cibo disponibili nel catalogo globale.",
+        "description": "Categorie catalogo",
         "responses": {
           "200": {
             "description": "OK"
@@ -338,7 +338,7 @@
     },
     "/ristoratore/{id}/piatti": {
       "post": {
-        "description": "Aggiunge un nuovo piatto al menu del ristoratore specificato, copiandolo dal catalogo o creandolo.",
+        "description": "Aggiungi piatto",
         "parameters": [
           {
             "name": "id",
@@ -372,7 +372,7 @@
         }
       },
       "get": {
-        "description": "Ottiene l'elenco completo dei piatti presenti nel menu del singolo ristoratore indicato.",
+        "description": "Menu ristoratore",
         "parameters": [
           {
             "name": "id",
@@ -393,7 +393,7 @@
     },
     "/ristoratore/{rId}/piatti/{pId}": {
       "put": {
-        "description": "Aggiorna i dettagli (prezzo, ingredienti...) di un piatto specifico nel menu del ristorante.",
+        "description": "Aggiorna piatto",
         "parameters": [
           {
             "name": "rId",
@@ -432,7 +432,7 @@
     },
     "/ricerca/generale": {
       "get": {
-        "description": "Motore di ricerca globale: trova contemporaneamente piatti (per nome/categoria) e ristoranti (per nome/indirizzo).",
+        "description": "Ricerca globale",
         "parameters": [
           {
             "name": "q",
@@ -452,7 +452,7 @@
     },
     "/ricerca/ristorante": {
       "get": {
-        "description": "Cerca un ristorante per nome e restituisce i dettagli inclusi tutti i piatti del suo menu (Join).",
+        "description": "Ricerca ristorante e menu",
         "parameters": [
           {
             "name": "q",
@@ -472,7 +472,7 @@
     },
     "/ricerca/ingrediente": {
       "get": {
-        "description": "Restituisce tutti i piatti che contengono l'ingrediente specificato (Requisito: ricerca piatti per ingredienti).",
+        "description": "Ricerca per ingrediente",
         "parameters": [
           {
             "name": "q",
@@ -492,7 +492,7 @@
     },
     "/ricerca/luogo": {
       "get": {
-        "description": "Trova i ristoranti situati in una specifica via o città (Requisito: ricerca ristorante per luogo).",
+        "description": "Ricerca per luogo",
         "parameters": [
           {
             "name": "q",
@@ -512,7 +512,7 @@
     },
     "/ricerca/allergene": {
       "get": {
-        "description": "Filtra i piatti escludendo quelli che contengono l'allergene specificato (Requisito: ricerca piatti per allergie).",
+        "description": "Ricerca esclusione allergene",
         "parameters": [
           {
             "name": "q",
@@ -532,7 +532,7 @@
     },
     "/ricerca/piatto-ristorante": {
       "get": {
-        "description": "Cerca un piatto specifico e restituisce l'elenco dei ristoranti che lo servono (Requisito: ricerca ristorante per piatto).",
+        "description": "Ricerca ristorante per piatto",
         "parameters": [
           {
             "name": "q",
@@ -552,7 +552,7 @@
     },
     "/ordine": {
       "post": {
-        "description": "Salva l'ordine, calcola i tempi (preparazione + viaggio) e il costo di consegna basato sulla distanza (OpenStreetMap).",
+        "description": "Salva ordine",
         "parameters": [
           {
             "name": "body",
@@ -597,7 +597,7 @@
     },
     "/ordine/preventivo": {
       "post": {
-        "description": "Calcola un preventivo di tempi e costi di consegna senza salvare l'ordine (utile per il carrello).",
+        "description": "Preventivo ordine",
         "parameters": [
           {
             "name": "body",
@@ -633,7 +633,7 @@
     },
     "/cliente/{id}/ordini": {
       "get": {
-        "description": "Restituisce lo storico degli acquisti passati e lo stato degli ordini in corso per un cliente.",
+        "description": "Storico ordini cliente",
         "parameters": [
           {
             "name": "id",
@@ -654,7 +654,7 @@
     },
     "/ristoratore/{id}/ordini": {
       "get": {
-        "description": "Visualizza la coda di preparazione: lista degli ordini ricevuti dal ristorante ordinati per priorità.",
+        "description": "Coda ordini ristoratore",
         "parameters": [
           {
             "name": "id",
@@ -675,7 +675,7 @@
     },
     "/ristoratore/{id}/statistiche": {
       "get": {
-        "description": "Calcola il totale guadagni e genera la classifica dei 5 piatti più venduti del ristorante.",
+        "description": "Statistiche ristoratore",
         "parameters": [
           {
             "name": "id",
@@ -696,7 +696,7 @@
     },
     "/utils/geocode": {
       "post": {
-        "description": "Servizio interno per convertire un indirizzo in coordinate Lat/Lon usando API OpenStreetMap.",
+        "description": "Geocoding interno",
         "parameters": [
           {
             "name": "body",

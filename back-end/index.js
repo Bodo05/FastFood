@@ -7,7 +7,10 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger_output.json');
 
 const app = express();
-app.use('/doc-swagger', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+
+// API per documentazione api
+app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+
 const port = 3000;
 const mongoURL = "mongodb+srv://admin:admin@cluster0.fczult8.mongodb.net/";
 const dbName = "fastfood";

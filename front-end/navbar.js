@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const placeholder = document.getElementById('navbar-placeholder');
     if (!placeholder) return;
 
+    // prendo dal local storage se utente o ristoratore e ID
     const userType = localStorage.getItem('userType');
     const userId = localStorage.getItem('_id');
     
@@ -9,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let homeLink = 'login.html';
     let searchBar = '';
 
+    // se ristoratore ho un tipo di navbar, altrimenti ho quella del cliente
     if (userType === 'ristoratore') {
         homeLink = 'ristoratore.html';
         links = `

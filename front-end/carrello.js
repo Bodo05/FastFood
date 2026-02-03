@@ -19,6 +19,7 @@ function aggiornaCarrello() {
 
     container.innerHTML = "";
 
+    //nell'HTML imposto a display none, cosi poi da qui posso mostrare se carrello non è vuoto
     if (carrello.length === 0) {
         container.innerHTML = '<div class="alert alert-warning text-center">Carrello vuoto.</div>';
         azioniEl.style.display = 'none';
@@ -28,10 +29,11 @@ function aggiornaCarrello() {
 
     let totale = 0;
     
+    // i due bottoni alla fine chiamano la funzione di modifica quantità passando 1 se aggiunto 1 piatto o - 1 se togli 1 piatto
     carrello.forEach(function(p) {
         const subtotale = (p.price || 0) * p.quantita;
         totale += subtotale;
-        
+        //aggiungo le card dei piatti con i vari dettagli nel container
         container.innerHTML += `
             <div class="card mb-2">
                 <div class="card-body d-flex justify-content-between align-items-center">
@@ -41,7 +43,7 @@ function aggiornaCarrello() {
                     </div>
                     <div>
                         <span class="me-3">€${subtotale.toFixed(2)}</span>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="modificaQuantita('${p.idMeal}', 1)">+</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="modificaQuantita('${p.idMeal}', 1)">+</button> 
                         <button class="btn btn-sm btn-outline-secondary" onclick="modificaQuantita('${p.idMeal}', -1)">-</button>
                     </div>
                 </div>
@@ -69,6 +71,7 @@ function modificaQuantita(idMeal, variazione) {
     }
 }
 
+// svuoto il mio array e chiamo salvacarrello per salvare il lacalstorage carrello come vuoto
 function svuotaCarrello() {
     carrello = [];
     salvaCarrello();

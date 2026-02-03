@@ -5,6 +5,7 @@ if (!rId) {
 
 document.addEventListener('DOMContentLoaded', caricaOrdini);
 
+// polling ogni 3 secondi degli ordini (interroga api /ordini)
 setInterval(function() {
     const orologio = document.getElementById('orologio');
     if (orologio) {
