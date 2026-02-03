@@ -1,52 +1,43 @@
-        function showToast(message, type = 'danger') {
-            const container = document.getElementById('toastPlaceHolder');
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = `
-              <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                  <div class="toast-body fw-bold">${message}</div>
-                  <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-              </div>`;
-            container.appendChild(wrapper.firstElementChild);
-            const toastEl = container.lastElementChild;
-            new bootstrap.Toast(toastEl).show();
-            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+const rId = localStorage.getItem('_id');
+if (!rId) {
+    window.location.href = 'login.html';
+}
+
+caricaStatistiche();
+
+async function caricaStatistiche() {
+    try {
+        const risposta = await fetch(API_URL + '/ristoratore/' + rId + '/statistiche');
+        const dati = await risposta.json();
+
+        document.getElementById('totaleGuadagni').innerText = dati.totaleGuadagni.toFixed(2);
+        document.getElementById('numeroOrdini').innerText = dati.numeroOrdini;
+
+        const lista = document.getElementById('listaPopolari');
+        lista.innerHTML = '';
+
+        if (dati.classificaPiatti.length === 0) {
+            lista.innerHTML = '<li class="list-group-item text-muted">Nessun dato disponibile.</li>';
+            return;
         }
 
-        const rId = localStorage.getItem('_id');
-        if(!rId) location.href='login.html';
+        dati.classificaPiatti.forEach(function(piatto, i) {
+            let medaglia = '';
+            if (i === 0) medaglia = '🥇';
+            else if (i === 1) medaglia = '🥈';
+            else if (i === 2) medaglia = '🥉';
 
-        async function loadStats() {
-            try {
-                // prendo i dati delle statistiche dall'endpoint dedicato
-                const res = await fetch(`http://localhost:3000/ristoratore/${rId}/statistiche`);
-                const data = await res.json();
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between';
+            li.innerHTML = `
+                <span>${medaglia} <strong>${piatto.nome}</strong></span>
+                <span class="badge bg-primary">${piatto.quantita} venduti</span>
+            `;
+            lista.appendChild(li);
+        });
 
-                //aggiornamento elementi con il testo preso tramite api
-                document.getElementById('totaleGuadagni').innerText = data.totaleGuadagni.toFixed(2); //guadagno con 2 decimali
-                document.getElementById('numeroOrdini').innerText = data.numeroOrdini;
-
-                const list = document.getElementById('listaPopolari');
-                list.innerHTML = '';
-                
-                // se 0 ordini
-                if(data.classificaPiatti.length === 0) {
-                    list.innerHTML = '<li class="list-group-item text-muted">Nessun dato disponibile.</li>';
-                } else {
-                    // scorro i la classifica dei paitti
-                    data.classificaPiatti.forEach((p, i) => {
-                        const badge = i === 0 ? '🥇' : (i === 1 ? '🥈' : '🥉');
-                        const li = document.createElement('li');
-                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                        li.innerHTML = `<span>${i < 3 ? badge : ''} <strong>${p.nome}</strong></span> 
-                                        <span class="badge bg-primary rounded-pill">${p.quantita} venduti</span>`;
-                        list.appendChild(li);
-                    });
-                }
-            } catch(e) { 
-                console.error(e); 
-                showToast("Errore caricamento statistiche", "danger");
-            }
-        }
-        loadStats();
+    } catch (errore) {
+        console.error(errore);
+        showToast("Errore caricamento statistiche", "danger");
+    }
+}

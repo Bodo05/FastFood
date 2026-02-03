@@ -11,26 +11,24 @@
     <div id="navbar-placeholder"></div>
     <div class="toast-box" id="toastPlaceHolder"></div>
 
-    <main class="container mt-5">
-        <div class="text-center mb-4">
-            <h2>Cosa vuoi mangiare oggi?</h2>
-            <p class="text-muted">Usa i filtri per trovare il piatto perfetto.</p>
-        </div>
+    <main class="container mt-4">
+        <h2 class="text-center mb-4">Cosa vuoi mangiare oggi?</h2>
 
-        <div class="card card-clean p-4 mb-5">
+        <!-- Barra di ricerca -->
+        <div class="card p-4 mb-4 shadow-sm">
             <div class="row g-2">
                 <div class="col-md-3">
                     <select class="form-select" id="tipoRicerca" onchange="aggiornaPlaceholder()">
-                        <option value="generale" selected>Tutto (Generale)</option>
+                        <option value="generale">Tutto</option>
                         <option value="ingrediente">Per Ingrediente</option>
                         <option value="ristorante">Per Ristorante</option>
-                        <option value="luogo">Per Luogo (Città)</option>
+                        <option value="luogo">Per Città</option>
                         <option value="allergene">Escludi Allergene</option>
-                        <option value="piatto_ristorante">Ristorante per Piatto</option>
+                        <option value="piatto_ristorante">Chi fa questo piatto?</option>
                     </select>
                 </div>
                 <div class="col-md-7">
-                    <input type="text" class="form-control" id="inputRicerca" placeholder="Cerca piatti o categorie...">
+                    <input type="text" class="form-control" id="inputRicerca" placeholder="Cerca...">
                 </div>
                 <div class="col-md-2">
                     <button class="btn btn-primary w-100" onclick="eseguiRicerca()">Cerca</button>
@@ -38,14 +36,14 @@
             </div>
         </div>
 
+        <!-- Loading -->
         <div id="loading" class="text-center d-none">
-            <div class="spinner-border text-primary" role="status"></div>
+            <div class="spinner-border text-primary"></div>
         </div>
-        
+
+        <!-- Risultati -->
         <div id="containerRisultati" class="row g-4">
-            <div class="col-12 text-center text-muted mt-5">
-                I risultati della tua ricerca appariranno qui.
-            </div>
+            <p class="text-center text-muted mt-5">I risultati appariranno qui.</p>
         </div>
     </main>
 

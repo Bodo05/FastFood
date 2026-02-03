@@ -11,32 +11,34 @@
     <div id="navbar-placeholder"></div>
     <div class="toast-box" id="toastPlaceHolder"></div>
 
-    <main class="container mt-5">
+    <main class="container mt-4">
         <h2 class="mb-4">Statistiche Vendite</h2>
-        
-        <div class="row text-center mb-4">
+
+        <!-- Card statistiche -->
+        <div class="row mb-4">
             <div class="col-md-6">
-                <div class="card text-white bg-success mb-3">
+                <div class="card text-white bg-success">
                     <div class="card-header">Guadagni Totali</div>
-                    <div class="card-body">
-                        <h1 class="card-title display-4">€<span id="totaleGuadagni">0.00</span></h1>
-                        <p class="card-text">Ordini Completati</p>
+                    <div class="card-body text-center">
+                        <h1 class="display-4">€<span id="totaleGuadagni">0.00</span></h1>
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="card text-white bg-info mb-3">
-                    <div class="card-header">Totale Ordini</div>
-                    <div class="card-body">
-                        <h1 class="card-title display-4" id="numeroOrdini">0</h1>
-                        <p class="card-text">Consegnati con successo</p>
+                <div class="card text-white bg-info">
+                    <div class="card-header">Ordini Completati</div>
+                    <div class="card-body text-center">
+                        <h1 class="display-4" id="numeroOrdini">0</h1>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Classifica piatti -->
         <div class="card">
-            <div class="card-header">Piatti più Venduti</div>
+            <div class="card-header">
+                <h5 class="mb-0">Piatti più Venduti</h5>
+            </div>
             <ul class="list-group list-group-flush" id="listaPopolari">
                 <li class="list-group-item text-muted text-center">Caricamento...</li>
             </ul>

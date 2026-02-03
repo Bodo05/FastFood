@@ -1,84 +1,94 @@
-let carrello = JSON.parse(localStorage.getItem("carrello")) || [];
 const CLIENT_ID = localStorage.getItem('_id');
+if (!CLIENT_ID) {
+    alert("Login richiesto");
+    window.location.href = 'login.html';
+}
 
-window.onload = () => {
-    if (!CLIENT_ID) { 
-        alert("Login richiesto"); // Qui l'alert va bene perché blocca ed esegue il redirect
-        location.href='login.html'; return; 
-    }
+let carrello = JSON.parse(localStorage.getItem("carrello")) || [];
+
+window.onload = function() {
     aggiornaCarrello();
-    toggleIndirizzo(); 
+    toggleIndirizzo();
 };
 
 function aggiornaCarrello() {
     const container = document.getElementById("carrelloContainer");
     const totaleEl = document.getElementById("totale");
-    const checkoutEl = document.getElementById("checkoutSection");
     const azioniEl = document.getElementById("azioniCarrello");
+    const checkoutEl = document.getElementById("checkoutSection");
 
     container.innerHTML = "";
+
     if (carrello.length === 0) {
         container.innerHTML = '<div class="alert alert-warning text-center">Carrello vuoto.</div>';
-        if(checkoutEl) checkoutEl.style.display = 'none';
-        if(azioniEl) azioniEl.style.display = 'none';
+        azioniEl.style.display = 'none';
+        checkoutEl.style.display = 'none';
         return;
     }
 
     let totale = 0;
-    const gruppi = carrello.reduce((acc, item) => {
-        const key = item.ristoranteId;
-        if (!acc[key]) acc[key] = { id: key, nome: item.ristoranteNome, piatti: [] };
-        acc[key].piatti.push(item);
-        return acc;
-    }, {});
-
-    Object.values(gruppi).forEach(gruppo => {
-        let htmlPiatti = '';
-        gruppo.piatti.forEach(p => {
-            const sub = (p.price || p.prezzo || 0) * p.quantita;
-            totale += sub;
-            htmlPiatti += `
-                <li class="list-group-item d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center">
-                        <img src="${p.strMealThumb || 'https://via.placeholder.com/50'}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                        <span class="badge bg-secondary me-2">${p.quantita}x</span>
-                        <strong>${p.strMeal || p.nome}</strong>
+    
+    carrello.forEach(function(p) {
+        const subtotale = (p.price || 0) * p.quantita;
+        totale += subtotale;
+        
+        container.innerHTML += `
+            <div class="card mb-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${p.strMeal}</strong>
+                        <span class="badge bg-secondary ms-2">${p.quantita}x</span>
                     </div>
                     <div>
-                        <span>€${sub.toFixed(2)}</span>
-                        <button class="btn btn-sm btn-outline-secondary ms-2 me-1 py-0" onclick="modifica('${p.idMeal}', 1)">+</button>
-                        <button class="btn btn-sm btn-outline-secondary py-0" onclick="modifica('${p.idMeal}', -1)">-</button>
+                        <span class="me-3">€${subtotale.toFixed(2)}</span>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="modificaQuantita('${p.idMeal}', 1)">+</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="modificaQuantita('${p.idMeal}', -1)">-</button>
                     </div>
-                </li>`;
-        });
-        container.innerHTML += `<ul class="list-group mb-3 shadow-sm"><li class="list-group-item active fw-bold">${gruppo.nome}</li>${htmlPiatti}</ul>`;
+                </div>
+            </div>
+        `;
     });
 
-    if(totaleEl) totaleEl.innerText = totale.toFixed(2);
-    if(azioniEl) azioniEl.style.display = 'block';
+    totaleEl.innerText = totale.toFixed(2);
+    azioniEl.style.display = 'block';
 }
 
-function trovaIndice(idMeal) { return carrello.findIndex(item => item.idMeal === idMeal); }
-function modifica(idMeal, q) {
-    const i = trovaIndice(idMeal);
-    if (i !== -1) { carrello[i].quantita += q; if (carrello[i].quantita < 1) carrello.splice(i, 1); salva(); }
+function modificaQuantita(idMeal, variazione) {
+    const index = carrello.findIndex(function(item) {
+        return item.idMeal === idMeal;
+    });
+    
+    if (index !== -1) {
+        carrello[index].quantita += variazione;
+        
+        if (carrello[index].quantita < 1) {
+            carrello.splice(index, 1);
+        }
+        
+        salvaCarrello();
+    }
 }
-function rimuovi(idMeal) { const i = trovaIndice(idMeal); if (i !== -1) carrello.splice(i, 1); salva(); }
-function svuotaCarrello() { carrello = []; salva(); }
-function salva() { localStorage.setItem("carrello", JSON.stringify(carrello)); aggiornaCarrello(); calcolaPreventivo(); }
+
+function svuotaCarrello() {
+    carrello = [];
+    salvaCarrello();
+}
+
+function salvaCarrello() {
+    localStorage.setItem("carrello", JSON.stringify(carrello));
+    aggiornaCarrello();
+    calcolaPreventivo();
+}
 
 function mostraCheckout() {
     document.getElementById('checkoutSection').style.display = 'block';
-    // Smooth scroll verso il basso
-    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
-    const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
-    if(tipo === 'asporto') calcolaPreventivo();
+    calcolaPreventivo();
 }
 
 function toggleIndirizzo() {
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     document.getElementById('divIndirizzo').style.display = (tipo === 'domicilio') ? 'block' : 'none';
-    calcolaPreventivo(); 
+    calcolaPreventivo();
 }
 
 async function calcolaPreventivo() {
@@ -88,67 +98,85 @@ async function calcolaPreventivo() {
     const box = document.getElementById('boxPreventivo');
     
     if (carrello.length === 0) return;
-    let totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
+    
+    let totPiatti = 0;
+    carrello.forEach(function(p) {
+        totPiatti += (p.price || 0) * p.quantita;
+    });
 
-    // Reset UI
     box.style.display = 'none';
     btn.disabled = true;
 
-    if(tipo === 'domicilio' && indirizzo.length < 5) return;
-
-    const payload = { piatti: carrello, tipoConsegna: tipo, indirizzoConsegna: indirizzo, ristoranteId: carrello[0].ristoranteId };
+    if (tipo === 'domicilio' && indirizzo.length < 5) return;
 
     try {
-        const res = await fetch('http://localhost:3000/ordine/preventivo', {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+        const risposta = await fetch(API_URL + '/ordine/preventivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                piatti: carrello,
+                tipoConsegna: tipo,
+                indirizzoConsegna: indirizzo,
+                ristoranteId: carrello[0].ristoranteId
+            })
         });
-        const d = await res.json();
-
-        document.getElementById('prevPrep').innerText = d.tempoPreparazione + " min";
-        document.getElementById('prevViaggio').innerText = d.tempoViaggio + " min";
-        document.getElementById('prevCosto').innerText = "€" + d.costoConsegna.toFixed(2);
         
-        const finale = totPiatti + d.costoConsegna;
-        document.getElementById('prevTotale').innerText = "€" + finale.toFixed(2);
+        const dati = await risposta.json();
+
+        document.getElementById('prevPrep').innerText = dati.tempoPreparazione + " min";
+        document.getElementById('prevViaggio').innerText = dati.tempoViaggio + " min";
+        document.getElementById('prevCosto').innerText = "€" + dati.costoConsegna.toFixed(2);
+        document.getElementById('prevTotale').innerText = "€" + (totPiatti + dati.costoConsegna).toFixed(2);
 
         box.style.display = 'block';
         btn.disabled = false;
-    } catch(e) { console.error(e); }
+        
+    } catch (errore) {
+        console.error(errore);
+    }
 }
 
 async function inviaOrdine() {
-    const btn = document.querySelector('#formOrdine button[type="submit"]');
-    const testoOriginale = btn.innerText;
-    
+    const btn = document.getElementById('btnPaga');
     btn.disabled = true;
     btn.innerText = "Invio...";
 
-    let totPiatti = carrello.reduce((sum, p) => sum + ((p.price||0)*p.quantita), 0);
+    let totPiatti = 0;
+    carrello.forEach(function(p) {
+        totPiatti += (p.price || 0) * p.quantita;
+    });
+
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const indirizzo = document.getElementById('indirizzo').value;
 
-    const payload = {
-        clienteId: CLIENT_ID, ristoranteId: carrello[0].ristoranteId,
-        piatti: carrello, totale: totPiatti, tipoConsegna: tipo,
-        indirizzoConsegna: tipo === 'domicilio' ? indirizzo : null
-    };
-
     try {
-        const res = await fetch('http://localhost:3000/ordine', {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+        const risposta = await fetch(API_URL + '/ordine', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                clienteId: CLIENT_ID,
+                ristoranteId: carrello[0].ristoranteId,
+                piatti: carrello,
+                totale: totPiatti,
+                tipoConsegna: tipo,
+                indirizzoConsegna: tipo === 'domicilio' ? indirizzo : null
+            })
         });
 
-        if(res.ok) {
-            // NOTIFICA BOOTSTRAP DI SUCCESSO
+        if (risposta.ok) {
             showToast("Ordine confermato! Grazie.", "success");
             svuotaCarrello();
-            setTimeout(() => window.location.href = 'cliente.html', 2500);
+            setTimeout(function() {
+                window.location.href = 'cliente.html';
+            }, 2000);
         } else {
-            showToast("Errore invio ordine. Riprova.", "danger");
-            btn.disabled = false; btn.innerText = testoOriginale;
+            showToast("Errore nell'invio dell'ordine", "danger");
+            btn.disabled = false;
+            btn.innerText = "CONFERMA ORDINE";
         }
-    } catch(e) {
-        showToast("Errore connessione al server", "danger");
-        btn.disabled = false; btn.innerText = testoOriginale;
+    } catch (errore) {
+        showToast("Errore di connessione", "danger");
+        btn.disabled = false;
+        btn.innerText = "CONFERMA ORDINE";
     }
 }

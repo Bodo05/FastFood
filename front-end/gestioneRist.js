@@ -1,45 +1,32 @@
 const userId = localStorage.getItem('_id');
-const API_URL = 'http://localhost:3000';
-
-const validators = {
-    piva: (piva) => /^\d{11}$/.test(piva),
-    telefono: (tel) => /^\d{8,15}$/.test(tel)
-};
-
-// Funzione Helper Notifiche (usa alert se showToast non è disponibile globalmente)
-function msg(text) {
-    if(typeof showToast === 'function') showToast(text, 'warning');
-    else alert(text);
+if (!userId) {
+    alert("Sessione scaduta.");
+    window.location.href = 'login.html';
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    if (!userId) {
-        alert("Sessione scaduta.");
-        window.location.href = 'login.html';
-        return;
-    }
+document.addEventListener('DOMContentLoaded', caricaProfilo);
 
+async function caricaProfilo() {
     try {
-        const response = await fetch(`${API_URL}/ristoratore/${userId}`);
-        if (response.ok) {
-            const data = await response.json();
-            document.getElementById('nomeRistorante').value = data.nomeRistorante || '';
-            document.getElementById('email').value = data.email || '';
-            document.getElementById('indirizzo').value = data.indirizzo || '';
-            document.getElementById('telefono').value = data.telefono || '';
-            document.getElementById('piva').value = data.piva || '';
-        } else {
-            console.error("Errore fetch dati:", response.status);
+        const risposta = await fetch(API_URL + '/ristoratore/' + userId);
+        
+        if (risposta.ok) {
+            const dati = await risposta.json();
+            document.getElementById('nomeRistorante').value = dati.nomeRistorante || '';
+            document.getElementById('email').value = dati.email || '';
+            document.getElementById('indirizzo').value = dati.indirizzo || '';
+            document.getElementById('telefono').value = dati.telefono || '';
+            document.getElementById('piva').value = dati.piva || '';
         }
-    } catch (error) {
-        console.error("Errore di connessione:", error);
+    } catch (errore) {
+        console.error("Errore:", errore);
     }
-});
+}
 
 const form = document.getElementById('formProfilo');
 if (form) {
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault(); 
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
 
         const nomeRist = document.getElementById('nomeRistorante').value.trim();
         const piva = document.getElementById('piva').value.trim();
@@ -47,57 +34,61 @@ if (form) {
         const indirizzo = document.getElementById('indirizzo').value.trim();
         const email = document.getElementById('email').value.trim();
 
-        // Validazioni
-        if (!nomeRist || !indirizzo || !email || !piva) return msg("Compila i campi obbligatori.");
-        if (!validators.piva(piva)) return msg("La P.IVA deve essere di 11 cifre.");
-        if (telefono && !validators.telefono(telefono)) return msg("Telefono non valido.");
+        if (!nomeRist || !indirizzo || !email || !piva) {
+            showToast("Compila tutti i campi obbligatori", "warning");
+            return;
+        }
 
-        const datiAggiornati = {
-            nomeRistorante: nomeRist,
-            email: email,
-            indirizzo: indirizzo,
-            telefono: telefono,
-            piva: piva
-        };
+        if (!/^\d{11}$/.test(piva)) {
+            showToast("La P.IVA deve essere di 11 cifre", "warning");
+            return;
+        }
 
         try {
-            const response = await fetch(`${API_URL}/ristoratore/${userId}`, {
+            const risposta = await fetch(API_URL + '/ristoratore/' + userId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(datiAggiornati)
+                body: JSON.stringify({
+                    nomeRistorante: nomeRist,
+                    email: email,
+                    indirizzo: indirizzo,
+                    telefono: telefono,
+                    piva: piva
+                })
             });
 
-            if (response.ok) {
-                if(typeof showToast === 'function') showToast("Profilo aggiornato!", "success");
-                else alert("Profilo aggiornato!");
+            if (risposta.ok) {
+                showToast("Profilo aggiornato!", "success");
             } else {
-                const err = await response.json();
-                msg("Errore: " + (err.message || "Sconosciuto"));
+                const err = await risposta.json();
+                showToast("Errore: " + (err.message || "Sconosciuto"), "danger");
             }
-        } catch (error) {
-            console.error(error);
-            msg("Errore di connessione.");
+        } catch (errore) {
+            console.error(errore);
+            showToast("Errore di connessione", "danger");
         }
     });
 }
 
 const btnElimina = document.getElementById('btnElimina');
 if (btnElimina) {
-    btnElimina.addEventListener('click', async () => {
-        if (!confirm("Sei sicuro di voler eliminare l'account? Questa azione è irreversibile!")) return;
+    btnElimina.addEventListener('click', async function() {
+        if (!confirm("Sei sicuro di voler eliminare l'account? Questa azione è irreversibile!")) {
+            return;
+        }
 
         try {
-            const response = await fetch(`${API_URL}/ristoratore/${userId}`, { method: 'DELETE' });
+            const risposta = await fetch(API_URL + '/ristoratore/' + userId, { method: 'DELETE' });
 
-            if (response.ok) {
+            if (risposta.ok) {
                 alert("Account eliminato.");
                 localStorage.clear();
                 window.location.href = 'login.html';
             } else {
-                msg("Impossibile eliminare l'account.");
+                showToast("Impossibile eliminare l'account", "danger");
             }
-        } catch (error) {
-            msg("Errore durante la cancellazione.");
+        } catch (errore) {
+            showToast("Errore durante la cancellazione", "danger");
         }
     });
 }

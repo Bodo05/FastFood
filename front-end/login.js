@@ -1,100 +1,64 @@
-// Funzione per mostrare notifiche (Toast)
-function showToast(message, type = 'danger') {
-    const container = document.getElementById('toastPlaceHolder');
-    if (!container) return alert(message);
-
-    // Creazione dinamica dell'elemento HTML per il Toast
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = `
-      <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-          <div class="toast-body fw-bold">
-            ${message}
-          </div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-      </div>
-    `;
-    
-    container.appendChild(wrapper.firstElementChild);
-    const toastEl = container.lastElementChild;
-    const toast = new bootstrap.Toast(toastEl);
-    toast.show();
-    
-    //rimuove l'elemento HTML quando la notifica sparisce
-    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('loginForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            login();
+        });
+    }
+});
 
 async function login() {
-    const emailField = document.getElementById('email');
-    const passwordField = document.getElementById('password');
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
     const btn = document.getElementById('btnLogin');
 
-    // Controllo campi vuoti
-    if (!emailField.value || !passwordField.value) {
+    if (!email || !password) {
         showToast("Inserisci email e password", "warning");
         return;
     }
 
-    const email = emailField.value;
-    const password = passwordField.value;
-    
-    // Recupera il tipo utente
-    const typeElement = document.querySelector('input[name="userType"]:checked');
-    const type = typeElement ? typeElement.value : 'cliente';
+    const tipoRadio = document.querySelector('input[name="userType"]:checked');
+    const tipo = tipoRadio ? tipoRadio.value : 'cliente';
 
-    const testoOriginale = btn.innerText;
-    btn.disabled = true; //disabilito pulsante per evitare doppi input
+    btn.disabled = true;
     btn.innerText = "Accesso in corso...";
 
-    //costruzione indirizzo endpoint in base al ruolo selezionato
-    const baseUrl = 'http://localhost:3000'; 
-    const endpoint = type === 'ristoratore' ? `${baseUrl}/ristoratore/login` : `${baseUrl}/cliente/login`;
-    
-    const dati = { email, password, type };
+    const endpoint = tipo === 'ristoratore' 
+        ? API_URL + '/ristoratore/login' 
+        : API_URL + '/cliente/login';
 
     try {
-
-        //chiamata al backend asincrona
-        const res = await fetch(endpoint, {
+        const risposta = await fetch(endpoint, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(dati)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
         });
 
-        const data = await res.json();
+        const dati = await risposta.json();
 
-        if (res.ok) {
-            showToast("Login effettuato con successo!", "success");
+        if (risposta.ok) {
+            localStorage.setItem('_id', dati._id);
+            localStorage.setItem('userType', tipo);
+
+            showToast("Login effettuato!", "success");
             
-            // Salva i dati essenziali
-            localStorage.setItem('_id', data._id); // Salviamo solo l'ID grezzo
-            localStorage.setItem('userType', type);
-
-            setTimeout(() => {
-                if (type === 'ristoratore') window.location.href = 'ristoratore.html';
-                else window.location.href = 'cliente.html';
+            setTimeout(function() {
+                if (tipo === 'ristoratore') {
+                    window.location.href = 'ristoratore.html';
+                } else {
+                    window.location.href = 'cliente.html';
+                }
             }, 1500);
         } else {
-            showToast(data.message || "Credenziali non valide", "danger");
+            showToast(dati.message || "Credenziali non valide", "danger");
             btn.disabled = false;
-            btn.innerText = testoOriginale;
+            btn.innerText = "Accedi";
         }
-    } catch (e) {
-        console.error(e);
+    } catch (errore) {
+        console.error(errore);
         showToast("Errore di connessione al server", "danger");
         btn.disabled = false;
-        btn.innerText = testoOriginale;
+        btn.innerText = "Accedi";
     }
 }
-
-// aspetta che la pagina sia pronta prima di cercare gli elementi
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', (event) => {
-            event.preventDefault(); // Blocca il ricaricamento standard della pagina
-            login(); // Chiama la tua funzione
-        });
-    }
-});

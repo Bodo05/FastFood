@@ -1,123 +1,126 @@
-const id = localStorage.getItem('_id');
-const API_URL = 'http://localhost:3000';
-
-if(!id || localStorage.getItem('userType') !== 'cliente') {
-    location.href='login.html';
+const userId = localStorage.getItem('_id');
+if (!userId || localStorage.getItem('userType') !== 'cliente') {
+    window.location.href = 'login.html';
 }
 
-function showToast(message, type = 'danger') {
-    const container = document.getElementById('toastPlaceHolder');
-    if(!container) return;
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = `
-      <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex"><div class="toast-body fw-bold">${message}</div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
-      </div>`;
-    container.appendChild(wrapper.firstElementChild);
-    const toastEl = container.lastElementChild;
-    new bootstrap.Toast(toastEl).show();
-    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-}
+document.addEventListener('DOMContentLoaded', caricaDati);
 
-document.addEventListener('DOMContentLoaded', async () => {
+async function caricaDati() {
     try {
-        // 1. Categorie
-        const resCat = await fetch(`${API_URL}/categorie-catalogo`);
-        const cats = await resCat.json();
-        const sel = document.getElementById('categoriaPreferita');
-        sel.innerHTML = '<option value="">-- Seleziona --</option>';
-        cats.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
-
-        // 2. Dati Utente
-        const resUser = await fetch(`${API_URL}/cliente/${id}`);
-        const user = await resUser.json();
-        document.getElementById('nome').value = user.nome || '';
-        document.getElementById('cognome').value = user.cognome || '';
-        document.getElementById('email').value = user.email || '';
-        if(user.preferenze?.length) sel.value = user.preferenze[0];
-
-        // 3. Ordini
-        const resOrdini = await fetch(`${API_URL}/cliente/${id}/ordini`);
-        const ordini = await resOrdini.json();
-        const div = document.getElementById('storico');
-        div.innerHTML = '';
+        const resCat = await fetch(API_URL + '/categorie-catalogo');
+        const categorie = await resCat.json();
+        const select = document.getElementById('categoriaPreferita');
         
-        if(ordini.length === 0) {
-            div.innerHTML = '<div class="list-group-item text-center text-muted py-4">Non hai ancora effettuato ordini.</div>';
-        } else {
-            ordini.forEach(o => {
-                const tot = parseFloat(o.totale||0);
-                const cons = parseFloat(o.costoConsegna||0);
-                const cibo = tot - cons;
-                const data = new Date(o.dataCreazione).toLocaleDateString();
-                
-                let badgeClass = 'bg-secondary';
-                if(o.stato === 'in_coda') badgeClass = 'bg-warning text-dark';
-                if(o.stato === 'in_preparazione') badgeClass = 'bg-primary';
-                if(o.stato === 'consegnato') badgeClass = 'bg-success';
-                
-                const infoConsegna = o.tipoConsegna === 'domicilio' 
-                    ? `<span class="text-danger small">+€${cons.toFixed(2)} sped.</span>` 
-                    : '<span class="text-success small">Ritiro</span>';
+        select.innerHTML = '<option value="">-- Seleziona --</option>';
+        categorie.forEach(function(cat) {
+            select.innerHTML += '<option value="' + cat + '">' + cat + '</option>';
+        });
 
-                div.innerHTML += `
-                <div class="list-group-item list-group-item-action">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-1 text-dark">${o.ristoranteNome || 'Ristorante'}</h5>
-                        <span class="badge ${badgeClass}">${o.stato.replace('_',' ').toUpperCase()}</span>
-                    </div>
-                    <p class="mb-1 small text-muted text-truncate">
-                        ${o.piatti.map(p=>p.nome||p.strMeal).join(', ')}
-                    </p>
-                    <div class="d-flex justify-content-between align-items-center mt-2 border-top pt-2">
-                        <small class="text-secondary">${data} • ${(o.tempoPreparazione||15)+(o.tempoViaggio||0)} min</small>
-                        <div class="text-end">
-                            <small class="d-block text-muted" style="font-size:0.85em;">Cibo: €${cibo.toFixed(2)} ${infoConsegna}</small>
-                            <span class="text-primary fw-bold">Totale: €${tot.toFixed(2)}</span>
-                        </div>
-                    </div>
-                </div>`;
-            });
+        const resUser = await fetch(API_URL + '/cliente/' + userId);
+        const utente = await resUser.json();
+        
+        document.getElementById('nome').value = utente.nome || '';
+        document.getElementById('cognome').value = utente.cognome || '';
+        document.getElementById('email').value = utente.email || '';
+        
+        if (utente.preferenze && utente.preferenze.length > 0) {
+            select.value = utente.preferenze[0];
         }
-    } catch(e) {
-        console.error(e);
+
+        const resOrdini = await fetch(API_URL + '/cliente/' + userId + '/ordini');
+        const ordini = await resOrdini.json();
+        mostraOrdini(ordini);
+
+    } catch (errore) {
+        console.error(errore);
         showToast("Errore caricamento dati", "danger");
     }
-});
+}
+
+function mostraOrdini(ordini) {
+    const container = document.getElementById('storico');
+    container.innerHTML = '';
+
+    if (ordini.length === 0) {
+        container.innerHTML = '<div class="list-group-item text-center text-muted">Non hai ancora ordini.</div>';
+        return;
+    }
+
+    ordini.forEach(function(ordine) {
+        const totale = parseFloat(ordine.totale || 0);
+        const consegna = parseFloat(ordine.costoConsegna || 0);
+        const cibo = totale - consegna;
+        const data = new Date(ordine.dataCreazione).toLocaleDateString();
+
+        let badgeClass = 'bg-secondary';
+        if (ordine.stato === 'in_coda') badgeClass = 'bg-warning text-dark';
+        if (ordine.stato === 'in_preparazione') badgeClass = 'bg-primary';
+        if (ordine.stato === 'consegnato') badgeClass = 'bg-success';
+
+        const piatti = ordine.piatti.map(function(p) {
+            return p.nome || p.strMeal;
+        }).join(', ');
+
+        container.innerHTML += `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between">
+                    <h6>${ordine.ristoranteNome || 'Ristorante'}</h6>
+                    <span class="badge ${badgeClass}">${ordine.stato.replace('_', ' ')}</span>
+                </div>
+                <p class="small text-muted mb-1">${piatti}</p>
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">${data}</small>
+                    <strong class="text-primary">€${totale.toFixed(2)}</strong>
+                </div>
+            </div>
+        `;
+    });
+}
 
 async function aggiorna() {
-    const nome = document.getElementById('nome').value;
-    const cognome = document.getElementById('cognome').value;
-    const pref = [document.getElementById('categoriaPreferita').value];
-    
+    const nome = document.getElementById('nome').value.trim();
+    const cognome = document.getElementById('cognome').value.trim();
+    const preferenza = document.getElementById('categoriaPreferita').value;
+
     try {
-        const res = await fetch(`${API_URL}/cliente/${id}`, {
-            method: 'PUT', 
-            headers: {'Content-Type':'application/json'}, 
-            body: JSON.stringify({nome, cognome, preferenze: pref})
+        const risposta = await fetch(API_URL + '/cliente/' + userId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: nome,
+                cognome: cognome,
+                preferenze: preferenza ? [preferenza] : []
+            })
         });
-        
-        if(res.ok) showToast('Profilo aggiornato con successo!', 'success');
-        else showToast('Errore durante l\'aggiornamento', 'warning');
-    } catch(e) { 
-        showToast("Errore di connessione", "danger"); 
+
+        if (risposta.ok) {
+            showToast('Profilo aggiornato!', 'success');
+        } else {
+            showToast('Errore aggiornamento', 'warning');
+        }
+    } catch (errore) {
+        showToast("Errore di connessione", "danger");
     }
 }
 
 async function elimina() {
-    if(!confirm('SEI SICURO?\nQuesta azione cancellerà definitivamente il tuo account.')) return;
-    
+    if (!confirm('Sei sicuro di voler eliminare il tuo account?')) {
+        return;
+    }
+
     try {
-        const res = await fetch(`${API_URL}/cliente/${id}`, {method:'DELETE'});
-        if(res.ok) {
-            showToast('Account eliminato. Arrivederci!', 'success');
+        const risposta = await fetch(API_URL + '/cliente/' + userId, { method: 'DELETE' });
+        
+        if (risposta.ok) {
+            showToast('Account eliminato', 'success');
             localStorage.clear();
-            setTimeout(() => location.href='login.html', 1500);
+            setTimeout(function() {
+                window.location.href = 'login.html';
+            }, 1500);
         } else {
-            showToast('Impossibile eliminare l\'account', 'danger');
+            showToast('Impossibile eliminare', 'danger');
         }
-    } catch(e) { 
-        showToast("Errore di connessione", "danger"); 
+    } catch (errore) {
+        showToast("Errore di connessione", "danger");
     }
 }

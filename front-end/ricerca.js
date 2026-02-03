@@ -1,223 +1,207 @@
-function showToast(message, type = 'success') {
-        const container = document.getElementById('toastPlaceHolder');
-        if(!container) return alert(message);
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = `
-          <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-              <div class="toast-body fw-bold">${message}</div>
-              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-          </div>`;
-        container.appendChild(wrapper.firstElementChild);
-        const toastEl = container.lastElementChild;
-        new bootstrap.Toast(toastEl).show();
-        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-    }
+/**
+ * FASTFOOD - Ricerca Piatti
+ */
 
-    // Qui incolliamo il resto della logica, ora usando showToast invece di alert dove serve
-    const API_URL = 'http://localhost:3000';
+document.addEventListener('DOMContentLoaded', function() {
+    aggiornaPlaceholder();
+    controllaParametriUrl();
+});
 
-    document.addEventListener('DOMContentLoaded', () => {
+function aggiornaPlaceholder() {
+    const tipo = document.getElementById('tipoRicerca').value;
+    const input = document.getElementById('inputRicerca');
+    
+    const placeholders = {
+        generale: "Es. Pizza, Pasta, Dessert...",
+        ingrediente: "Es. Pomodoro, Mozzarella...",
+        ristorante: "Es. Da Mario, Pizzeria...",
+        luogo: "Es. Milano, Roma...",
+        allergene: "Es. Glutine, Lattosio...",
+        piatto_ristorante: "Es. Carbonara..."
+    };
+    
+    input.placeholder = placeholders[tipo] || "Scrivi qui...";
+}
+
+function controllaParametriUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('q');
+    const ristorante = params.get('ristorante');
+
+    if (ristorante) {
+        document.getElementById('inputRicerca').value = ristorante;
+        document.getElementById('tipoRicerca').value = 'ristorante';
         aggiornaPlaceholder();
-        checkUrlParams();
-    });
+        eseguiRicerca();
+    } else if (query) {
+        document.getElementById('inputRicerca').value = query;
+        eseguiRicerca();
+    }
+}
 
-    function aggiornaPlaceholder() {
-        const tipo = document.getElementById('tipoRicerca').value;
-        const input = document.getElementById('inputRicerca');
-        const map = {
-            generale: "Es. Pizza, Pasta, Dessert...",
-            ingrediente: "Es. Pomodoro, Mozzarella, Pollo...",
-            ristorante: "Es. Da Mario, Pizzeria Napoli...",
-            luogo: "Es. Milano, Roma...",
-            allergene: "Es. Glutine, Lattosio...",
-            piatto_ristorante: "Es. Carbonara (trova chi la fa)..."
-        };
-        input.placeholder = map[tipo] || "Scrivi qui...";
+async function eseguiRicerca() {
+    const tipo = document.getElementById('tipoRicerca').value;
+    const query = document.getElementById('inputRicerca').value.trim();
+    const container = document.getElementById('containerRisultati');
+    const loading = document.getElementById('loading');
+
+    if (!query) {
+        showToast("Inserisci qualcosa da cercare!", "warning");
+        return;
     }
 
-    async function checkUrlParams() {
-        const params = new URLSearchParams(window.location.search);
-        const query = params.get('q');
-        const ristorante = params.get('ristorante');
+    container.innerHTML = '';
+    loading.classList.remove('d-none');
 
-        if (ristorante) {
-            document.getElementById('inputRicerca').value = ristorante;
-            document.getElementById('tipoRicerca').value = 'ristorante';
-            cercaPiattiDiRistorante(ristorante);
-        } else if (query) {
-            document.getElementById('inputRicerca').value = query;
-            eseguiRicerca();
-        }
+    // Encoding URI component
+    const qEnc = encodeURIComponent(query);
+    let endpoint = '';
+    
+    switch (tipo) {
+        case 'generale': endpoint = `/ricerca/generale?q=${qEnc}`; break;
+        case 'ingrediente': endpoint = `/ricerca/ingrediente?q=${qEnc}`; break;
+        case 'ristorante': endpoint = `/ricerca/ristorante?q=${qEnc}`; break;
+        case 'luogo': endpoint = `/ricerca/luogo?q=${qEnc}`; break;
+        case 'allergene': endpoint = `/ricerca/allergene?q=${qEnc}`; break;
+        case 'piatto_ristorante': endpoint = `/ricerca/piatto-ristorante?q=${qEnc}`; break;
     }
 
-    async function cercaPiattiDiRistorante(nomeRistorante) {
-        const container = document.getElementById('containerRisultati');
-        const loading = document.getElementById('loading');
+    try {
+        // Usa API_URL globale da utils.js
+        const risposta = await fetch(API_URL + endpoint);
         
-        container.innerHTML = '';
-        loading.classList.remove('d-none');
-
-        try {
-            const res = await fetch(`${API_URL}/ricerca/ristorante?q=${encodeURIComponent(nomeRistorante)}`);
-            const dati = await res.json();
-            
-            if (dati.length > 0 && dati[0].piattiMenu) {
-                mostraRisultati(dati[0].piattiMenu, 'generale');
-            } else {
-                container.innerHTML = '<div class="alert alert-warning">Nessun piatto trovato per questo ristorante.</div>';
-            }
-        } catch (err) {
-            console.error(err);
-            container.innerHTML = '<div class="alert alert-danger">Errore caricamento.</div>';
-        } finally {
-            loading.classList.add('d-none');
-        }
-    }
-
-    async function eseguiRicerca() {
-        const tipo = document.getElementById('tipoRicerca').value;
-        const query = document.getElementById('inputRicerca').value.trim();
-        const container = document.getElementById('containerRisultati');
-        const loading = document.getElementById('loading');
-
-        if (!query) { showToast("Inserisci qualcosa da cercare!", "warning"); return; }
-
-        container.innerHTML = '';
-        loading.classList.remove('d-none');
-
-        let endpoint = '';
-        switch (tipo) {
-            case 'generale': endpoint = `/ricerca/generale?q=${encodeURIComponent(query)}`; break;
-            case 'ingrediente': endpoint = `/ricerca/ingrediente?q=${encodeURIComponent(query)}`; break;
-            case 'ristorante': endpoint = `/ricerca/ristorante?q=${encodeURIComponent(query)}`; break;
-            case 'luogo': endpoint = `/ricerca/luogo?q=${encodeURIComponent(query)}`; break;
-            case 'allergene': endpoint = `/ricerca/allergene?q=${encodeURIComponent(query)}`; break;
-            case 'piatto_ristorante': endpoint = `/ricerca/piatto-ristorante?q=${encodeURIComponent(query)}`; break;
-        }
-
-        try {
-            const response = await fetch(API_URL + endpoint);
-            if (!response.ok) throw new Error("Errore server");
-            const dati = await response.json();
-            mostraRisultati(dati, tipo);
-        } catch (error) {
-            console.error(error);
-            container.innerHTML = `<div class="alert alert-danger">Errore di connessione.</div>`;
-        } finally {
-            loading.classList.add('d-none');
-        }
-    }
-
-    function getIngredienti(piatto) {
-        if (piatto.ingredients && Array.isArray(piatto.ingredients)) return piatto.ingredients.join(', ');
-        if (piatto.ingredienti && typeof piatto.ingredienti === 'string') return piatto.ingredienti.trim() || "";
-        let lista = [];
-        for (let i = 1; i <= 20; i++) {
-            const ing = piatto[`strIngredient${i}`];
-            if (ing && ing.trim()) lista.push(ing);
-        }
-        return lista.length > 0 ? lista.join(', ') : "Ingredienti non disponibili";
-    }
-
-    function mostraRisultati(dati, tipo) {
-        const container = document.getElementById('containerRisultati');
-        if (!dati || dati.length === 0) {
-            container.innerHTML = '<div class="col-12 text-center"><div class="alert alert-warning">Nessun risultato trovato.</div></div>';
-            return;
-        }
-
-        dati.forEach(item => {
-            if ((item.tipo === 'ristorante') || (item.nomeRistorante && !item.prezzo)) { 
-                renderCardRistorante(item, container);
-            } else if (tipo === 'piatto_ristorante') {
-                renderCardRistorantePiatto(item, container);
-            } else { 
-                renderCardPiatto(item, container);
-            }
-        });
-    }
-
-    function renderCardPiatto(piatto, container) {
-        const col = document.createElement('div');
-        col.className = 'col-md-4';
+        if (!risposta.ok) throw new Error("Errore server");
         
-        const img = piatto.thumb || piatto.strMealThumb || 'https://via.placeholder.com/300x200?text=No+Image';
-        const nome = piatto.nome || piatto.strMeal;
-        const rId = piatto.ristoranteId || '';
-        const ristNome = piatto.ristoranteNome || 'Sconosciuto';
-        const testoIngredienti = getIngredienti(piatto);
+        const risultati = await risposta.json();
+        mostraRisultati(risultati, tipo);
+        
+    } catch (errore) {
+        console.error(errore);
+        container.innerHTML = '<div class="alert alert-danger">Errore di connessione.</div>';
+    } finally {
+        loading.classList.add('d-none');
+    }
+}
 
-        col.innerHTML = `
-            <div class="card h-100 shadow-sm">
-                <img src="${img}" class="card-img-top" style="height: 200px; object-fit: cover;">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">${nome}</h5>
-                    <p class="text-muted small mb-1"> ${ristNome}</p>
-                    <p class="text-muted small text-truncate" title="${testoIngredienti}">
-                        <i class="bi bi-basket"></i> ${testoIngredienti}
-                    </p>
-                    <div class="mt-auto d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-primary">€${(piatto.prezzo||0).toFixed(2)}</span>
-                        <button class="btn btn-sm btn-outline-success" 
-                            onclick="aggiungiCarrello('${piatto._id}', '${nome.replace(/'/g, "\\'")}', ${piatto.prezzo || 0}, '${img}', '${piatto.categoria}', '${rId}', '${ristNome.replace(/'/g, "\\'")}')">
-                            + Carrello
-                        </button>
+function mostraRisultati(risultati, tipo) {
+    const container = document.getElementById('containerRisultati');
+    
+    if (!risultati || risultati.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center"><div class="alert alert-warning">Nessun risultato trovato.</div></div>';
+        return;
+    }
+
+    risultati.forEach(function(item) {
+        // 1. Menu Ristorante (Priorità)
+        if (item.piattiMenu && Array.isArray(item.piattiMenu)) {
+            const header = document.createElement('div');
+            header.className = 'col-12 mb-2 mt-3';
+            header.innerHTML = `
+                <div class="card border-primary bg-light shadow-sm">
+                    <div class="card-body">
+                        <h3 class="text-primary fw-bold">${item.nomeRistorante}</h3>
+                        <p class="mb-0"><strong>Indirizzo:</strong> ${item.indirizzo || 'N/D'}</p>
+                        <p class="mb-0"><strong>Telefono:</strong> ${item.telefono || 'N/D'}</p>
                     </div>
                 </div>
-            </div>`;
-        container.appendChild(col);
-    }
+                <h5 class="mt-4 mb-2 ps-2 border-start border-4 border-warning">Menu</h5>
+            `;
+            container.appendChild(header);
 
-    function renderCardRistorante(ristorante, container) {
-        const col = document.createElement('div');
-        col.className = 'col-md-6';
-        let menuHtml = '';
-        if(ristorante.piattiMenu && ristorante.piattiMenu.length > 0) {
-            const anteprima = ristorante.piattiMenu.map(p => p.nome || p.strMeal).slice(0,3).join(', ');
-            menuHtml = `<hr><small class="text-muted">Menu: ${anteprima}...</small>`;
+            if(item.piattiMenu.length === 0) {
+                container.innerHTML += '<div class="col-12 text-muted text-center py-3">Nessun piatto nel menu.</div>';
+            } else {
+                item.piattiMenu.forEach(p => creaCardPiatto(p, container));
+            }
+        } 
+        // 2. Ristorante Semplice
+        else if (item.nomeRistorante && !item.prezzo) {
+            creaCardRistorante(item, container);
+        } 
+        // 3. Piatto
+        else {
+            creaCardPiatto(item, container);
         }
-        col.innerHTML = `
-            <div class="card h-100 border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"> ${ristorante.nomeRistorante}</h5>
-                </div>
-                <div class="card-body">
-                    <p> ${ristorante.indirizzo || 'N/D'}</p>
-                    <p> ${ristorante.telefono || 'N/D'}</p>
-                    ${menuHtml}
-                    <a href="ricerca.html?ristorante=${encodeURIComponent(ristorante.nomeRistorante)}" class="btn btn-sm btn-primary mt-2">Vedi Menu</a>
-                </div>
-            </div>`;
-        container.appendChild(col);
-    }
+    });
+}
 
-    function renderCardRistorantePiatto(item, container) {
-        const rist = item.ristorante;
-        const col = document.createElement('div');
-        col.className = 'col-12';
-        const piattiHtml = item.piatti.map(p => `<span class="badge bg-success me-1">${p.nome || p.strMeal} (€${p.prezzo})</span>`).join('');
+function creaCardPiatto(piatto, container) {
+    const immagine = piatto.thumb || piatto.strMealThumb || 'https://via.placeholder.com/300x200?text=No+Image';
+    const nome = piatto.nome || piatto.strMeal || "Senza nome";
+    const ristorante = piatto.ristoranteNome || 'Sconosciuto';
+    const prezzo = parseFloat(piatto.prezzo || 0).toFixed(2); 
 
-        col.innerHTML = `
-            <div class="card mb-3 border-success">
-                <div class="card-body">
-                    <h5 class="card-title text-success">Presso: ${rist.nomeRistorante}</h5>
-                    <h6 class="card-subtitle mb-2 text-muted"> ${rist.indirizzo}</h6>
-                    <p>Ha trovato:</p>
-                    <div>${piattiHtml}</div>
-                    <a href="ricerca.html?ristorante=${encodeURIComponent(rist.nomeRistorante)}" class="btn btn-sm btn-outline-success mt-2">Vedi Menu Completo</a>
+    const col = document.createElement('div');
+    col.className = 'col-md-4';
+    col.innerHTML = `
+        <div class="card h-100 shadow-sm border-0">
+            <img src="${immagine}" class="card-img-top" style="height: 200px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300x200?text=Err+Img'">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title text-truncate" title="${nome}">${nome}</h5>
+                <p class="text-muted small mb-2">Da: ${ristorante}</p>
+                <div class="mt-auto d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-primary fs-5">€${prezzo}</span>
+                    <button class="btn btn-sm btn-outline-success fw-bold" onclick="aggiungiCarrello('${piatto._id}', '${nome.replace(/'/g, "\\'")}', ${piatto.prezzo || 0}, '${immagine}', '${piatto.categoria || ''}', '${piatto.ristoranteId || ''}', '${ristorante.replace(/'/g, "\\'")}')">
+                        + Carrello
+                    </button>
                 </div>
-            </div>`;
-        container.appendChild(col);
-    }
+            </div>
+        </div>
+    `;
+    container.appendChild(col);
+}
 
-    function aggiungiCarrello(id, nome, prezzo, thumb, cat, rId, rNome) {
-        if(!localStorage.getItem('_id')) return showToast("Effettua il login!", "danger");
-        let carrello = JSON.parse(localStorage.getItem('carrello') || '[]');
-        const item = carrello.find(i => i.idMeal === id);
-        if(item) item.quantita++; 
-        else carrello.push({idMeal:id, strMeal:nome, price:prezzo, strMealThumb:thumb, strCategory:cat, ristoranteId:rId, ristoranteNome:rNome, quantita:1});
-        localStorage.setItem('carrello', JSON.stringify(carrello));
-        showToast(`${nome} aggiunto!`, "success");
+function creaCardRistorante(ristorante, container) {
+    const col = document.createElement('div');
+    col.className = 'col-md-6';
+    col.innerHTML = `
+        <div class="card h-100 border-primary shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0 fw-bold">${ristorante.nomeRistorante}</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Indirizzo:</strong> ${ristorante.indirizzo || 'N/D'}</p>
+                <p class="mb-3"><strong>Telefono:</strong> ${ristorante.telefono || 'N/D'}</p>
+                <a href="ricerca.html?ristorante=${encodeURIComponent(ristorante.nomeRistorante)}" class="btn btn-primary w-100">
+                    Vedi Menu
+                </a>
+            </div>
+        </div>
+    `;
+    container.appendChild(col);
+}
+
+function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, ristoranteNome) {
+    if (!localStorage.getItem('_id')) {
+        showToast("Login richiesto!", "danger");
+        return;
     }
+    
+    let carrello = JSON.parse(localStorage.getItem('carrello') || '[]');
+    
+    // Check Multi-Ristorante
+    if (carrello.length > 0 && carrello[0].ristoranteId !== ristoranteId) {
+        showToast("Puoi ordinare da un solo ristorante alla volta!", "warning");
+        return; 
+    }
+    
+    const esistente = carrello.find(function(i) { return i.idMeal === id; });
+    
+    if (esistente) {
+        esistente.quantita++;
+    } else {
+        carrello.push({
+            idMeal: id,
+            strMeal: nome,
+            price: parseFloat(prezzo), 
+            strMealThumb: thumb,
+            strCategory: categoria,
+            ristoranteId: ristoranteId,
+            ristoranteNome: ristoranteNome,
+            quantita: 1
+        });
+    }
+    
+    localStorage.setItem('carrello', JSON.stringify(carrello));
+    showToast(nome + ' aggiunto!', 'success');
+}

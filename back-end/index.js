@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
 const axios = require('axios');
-const fs = require('fs'); //utilizzato per la lettura dei file
+const fs = require('fs');
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger_output.json');
 
@@ -18,7 +18,6 @@ app.use(express.json());
 const client = new MongoClient(mongoURL);
 let db;
 
-//converte stringa in ID MongoDB
 const toObjectId = (id) => {
     try {
         return new ObjectId(id);
@@ -27,7 +26,6 @@ const toObjectId = (id) => {
     }
 };
 
-//conversione indirizzo in formato testuale in coordinate (longitudine e latitudine)
 async function getCoordinates(address) {
     if (!address) return null;
     try {
@@ -36,7 +34,7 @@ async function getCoordinates(address) {
         
         if (res.data && res.data.length > 0) {
             return { 
-                lat: parseFloat(res.data[0].lat),   //da stringhe a numeri decimali
+                lat: parseFloat(res.data[0].lat),
                 lon: parseFloat(res.data[0].lon) 
             };
         }
@@ -46,7 +44,6 @@ async function getCoordinates(address) {
     return null;
 }
 
-// calcola distanza in km
 function calcolaDistanza(lat1, lon1, lat2, lon2) {
     const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -57,18 +54,12 @@ function calcolaDistanza(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-
-// ==========================================
-//             AVVIO SERVER
-// ==========================================
-
 async function startServer() {
     try {
         await client.connect();
         db = client.db(dbName);
         console.log(`Connesso al database: ${dbName}`);
 
-        // controllo se il catalogo è vuoto per caricare i dati
         const catalogCollection = db.collection('catalog');
         const count = await catalogCollection.countDocuments();
 
@@ -77,7 +68,6 @@ async function startServer() {
             const data = fs.readFileSync('meals1.json', 'utf8');
             const jsonData = JSON.parse(data);
             
-            // gestione del formato JSON
             let piattiDaInserire;
             if (Array.isArray(jsonData)) {
                 piattiDaInserire = jsonData;
@@ -85,7 +75,6 @@ async function startServer() {
                 piattiDaInserire = jsonData.meals || [];
             }
 
-            // piatti puliti contiene la trasformazione id da stringa $oid del json a un odbjectId 
             const piattiPuliti = piattiDaInserire.map(p => {
                 const nuovoPiatto = { ...p };
                 if (nuovoPiatto._id && nuovoPiatto._id.$oid) {
@@ -94,14 +83,12 @@ async function startServer() {
                 return nuovoPiatto;
             });
 
-            //inserimento nella collection catalog del database
             if (piattiPuliti.length > 0) {
                 await catalogCollection.insertMany(piattiPuliti);
-                console.log(`Inseriti ${piattiPuliti.length} piatti nella collection 'catalog'.`);
+                console.log(`Inseriti ${piattiPuliti.length} piatti.`);
             }
         }
 
-        // ascolto sulla porta specificata all'inzio del file dopo aver inizializzato il client
         app.listen(port, () => {
             console.log(`Server avviato su http://localhost:${port}`);
         });
@@ -112,14 +99,8 @@ async function startServer() {
 }
 startServer();
 
-
-// ==========================================
-//                 CLIENTI
-// ==========================================
-
-
 app.post("/cliente", async (req, res) => {
-    // #swagger.description = "Registrazione utente con i seguenti parametri: nome, cognome, email, password, preferenze e data registrazione"
+    // #swagger.description = "Registrazione utente"
     const nome = req.body.nome;
     const cognome = req.body.cognome;
     const email = req.body.email;
@@ -154,7 +135,7 @@ app.post("/cliente", async (req, res) => {
 });
 
 app.get("/cliente/:id", async (req, res) => {
-    // #swagger.description = "Recupera dal database le informazioni di un cliente in base al suo id"
+    // #swagger.description = "Recupera cliente"
     const id = req.params.id;
     try {
         const user = await db.collection('clienti').findOne({ _id: toObjectId(id) });
@@ -169,8 +150,8 @@ app.get("/cliente/:id", async (req, res) => {
 });
 
 app.put("/cliente/:id", async (req, res) => {
+    // #swagger.description = "Aggiorna cliente"
     const id = req.params.id;
-    // #swagger.description = "Aggiorna i dati di un cliente in base al suo id"
     try {
         await db.collection('clienti').updateOne(
             { _id: toObjectId(id) }, 
@@ -183,7 +164,7 @@ app.put("/cliente/:id", async (req, res) => {
 });
 
 app.delete("/cliente/:id", async (req, res) => {
-    // #swagger.description = "Cancellazione del cliente dal database utilizzando il suo id"
+    // #swagger.description = "Elimina cliente"
     const id = req.params.id;
     try {
         await db.collection('clienti').deleteOne({ _id: toObjectId(id) });
@@ -193,13 +174,8 @@ app.delete("/cliente/:id", async (req, res) => {
     }
 });
 
-
-// ==========================================
-//                RISTORATORI
-// ==========================================
-
 app.post("/ristoratore", async (req, res) => {
-    // #swagger.description = "Registrazione ristoratore inserendo i seguenti parametri: nomeRistorante, email, password, indirizzo, p. iva, latitudine, longitudine, piatti e data registrazione"
+    // #swagger.description = "Registrazione ristoratore"
     const nomeRistorante = req.body.nomeRistorante;
     const email = req.body.email;
     const password = req.body.password;
@@ -216,7 +192,6 @@ app.post("/ristoratore", async (req, res) => {
             return res.status(409).json({ message: "Email già in uso" });
         }
          
-        //uso funzione per passare da indirizzo testuale a coordinate lat e lon
         const coords = await getCoordinates(indirizzo);
         
         const nuovoRistoratore = {
@@ -235,7 +210,6 @@ app.post("/ristoratore", async (req, res) => {
         const result = await db.collection('ristoratori').insertOne(nuovoRistoratore);
         const rId = result.insertedId;
 
-        // Se ci sono piatti iniziali, li salviamo nella collection 'piatti'
         if (piattiMenu && piattiMenu.length > 0) {
             const piattiDaSalvare = [];
             for(let i=0; i<piattiMenu.length; i++) {
@@ -262,7 +236,7 @@ app.post("/ristoratore", async (req, res) => {
 });
 
 app.get("/ristoratore/:id", async (req, res) => {
-    // #swagger.description = "Recupera dal database le informazioni del ristoratore secondo il suo id"
+    // #swagger.description = "Recupera ristoratore"
     const id = req.params.id;
     try {
         const r = await db.collection('ristoratori').findOne({ _id: toObjectId(id) });
@@ -278,8 +252,7 @@ app.get("/ristoratore/:id", async (req, res) => {
 });
 
 app.put("/ristoratore/:id", async (req, res) => {
-    // #swagger.description = "Aggiorna i dati del ristorante (nome, indirizzo, piva, ecc)."
-    
+    // #swagger.description = "Aggiorna ristoratore"
     const id = req.params.id;
     try {
         await db.collection('ristoratori').updateOne(
@@ -293,37 +266,27 @@ app.put("/ristoratore/:id", async (req, res) => {
 });
 
 app.delete("/ristoratore/:id", async (req, res) => {
-    //#swagger.description = "Rimuove definitivamente il profilo del ristoratore dal sistema."
- 
+    // #swagger.description = "Elimina ristoratore"
     const id = req.params.id;
     try {
-        // Esegue la cancellazione nel database
         const result = await db.collection('ristoratori').deleteOne({ _id: toObjectId(id) });
-
         if (result.deletedCount === 1) {
             res.json({ message: "Profilo ristoratore eliminato correttamente." });
         } else {
             res.status(404).json({ message: "Ristoratore non trovato." });
         }
     } catch (error) {
-        console.error("Errore cancellazione:", error);
         res.status(500).json({ message: "Errore interno del server." });
     } 
 });
 
-
-// ==========================================
-//                  LOGIN
-// ==========================================
-
 app.post("/cliente/login", async (req, res) => {
-    //#swagger.description = "Login cliente usando email e password"
+    // #swagger.description = "Login cliente"
     const email = req.body.email;
     const password = req.body.password;
 
     try {
         const user = await db.collection('clienti').findOne({ email: email, password: password });
-        
         if (user) {
             res.json({ _id: user._id, type: 'cliente' });
         } else {
@@ -335,7 +298,7 @@ app.post("/cliente/login", async (req, res) => {
 });
 
 app.post("/ristoratore/login", async (req, res) => {
-    //#swagger.description = "Login ristoratore secondo email e password"
+    // #swagger.description = "Login ristoratore"
     const email = req.body.email;
     const password = req.body.password;
 
@@ -351,13 +314,8 @@ app.post("/ristoratore/login", async (req, res) => {
     }
 });
 
-
-// ==========================================
-//              MENU E CATALOGO
-// ==========================================
-
 app.get("/meals", async (req, res) => {
-    // #swagger.description = "Restituisce la lista pubblica di tutti i piatti attualmente in vendita nei ristoranti."
+    // #swagger.description = "Lista pubblica piatti"
     try {
         const result = await db.collection('piatti')
             .find({ ristoranteId: { $ne: null } })
@@ -370,7 +328,7 @@ app.get("/meals", async (req, res) => {
 });
 
 app.get("/catalog", async (req, res) => {
-    // #swagger.description = "Restituisce il catalogo globale dei piatti standard (da meal.json) per l'importazione."
+    // #swagger.description = "Catalogo globale"
     try {
         const result = await db.collection('catalog').find({}).toArray();
         res.json(result);
@@ -380,7 +338,7 @@ app.get("/catalog", async (req, res) => {
 });
 
 app.get("/categorie-catalogo", async (req, res) => {
-    // #swagger.description = "Restituisce l'elenco delle categorie di cibo disponibili nel catalogo globale."
+    // #swagger.description = "Categorie catalogo"
     try {
         const result = await db.collection('catalog').distinct('strCategory');
         res.json(result);
@@ -390,7 +348,7 @@ app.get("/categorie-catalogo", async (req, res) => {
 });
 
 app.post("/ristoratore/:id/piatti", async (req, res) => {
-    // #swagger.description = "Aggiunge un nuovo piatto al menu del ristoratore specificato, copiandolo dal catalogo o creandolo."
+    // #swagger.description = "Aggiungi piatto"
     const idRistoratore = req.params.id;
     const datiPiatto = req.body.piatto;
 
@@ -423,7 +381,7 @@ app.post("/ristoratore/:id/piatti", async (req, res) => {
 });
 
 app.get("/ristoratore/:id/piatti", async (req, res) => {
-    // #swagger.description = "Ottiene l'elenco completo dei piatti presenti nel menu del singolo ristoratore indicato."
+    // #swagger.description = "Menu ristoratore"
     const id = req.params.id;
     try {
         const result = await db.collection('piatti').find({ ristoranteId: toObjectId(id) }).toArray();
@@ -434,7 +392,7 @@ app.get("/ristoratore/:id/piatti", async (req, res) => {
 });
 
 app.put("/ristoratore/:rId/piatti/:pId", async (req, res) => {
-    // #swagger.description = "Aggiorna i dettagli (prezzo, ingredienti...) di un piatto specifico nel menu del ristorante."
+    // #swagger.description = "Aggiorna piatto"
     const rId = req.params.rId;
     const pId = req.params.pId;
     const dati = req.body.piatto;
@@ -454,14 +412,8 @@ app.put("/ristoratore/:rId/piatti/:pId", async (req, res) => {
     }
 });
 
-
-// ==========================================
-//                RICERCA
-// ==========================================
-
-// 1. Ricerca Generale
 app.get("/ricerca/generale", async (req, res) => {
-    // #swagger.description = "Motore di ricerca globale: trova contemporaneamente piatti (per nome/categoria) e ristoranti (per nome/indirizzo)."
+    // #swagger.description = "Ricerca globale"
     const q = req.query.q || "";
     const regex = new RegExp(q, 'i'); 
 
@@ -475,7 +427,6 @@ app.get("/ricerca/generale", async (req, res) => {
             $or: [{ nomeRistorante: regex }, { indirizzo: regex }] 
         }).toArray();
 
-        // Aggiungiamo etichette
         const resPiatti = piatti.map(p => { return { ...p, tipo: 'piatto' }; });
         const resRist = ristoranti.map(r => { return { ...r, tipo: 'ristorante' }; });
 
@@ -485,24 +436,13 @@ app.get("/ricerca/generale", async (req, res) => {
     }
 });
 
-// 2. Ricerca Ristorante (Fondamentale per "Vedi Menu")
 app.get("/ricerca/ristorante", async (req, res) => {
-    // #swagger.description = "Cerca un ristorante per nome e restituisce i dettagli inclusi tutti i piatti del suo menu (Join)."
+    // #swagger.description = "Ricerca ristorante e menu"
     const q = req.query.q || "";
     try {
-        // Uniamo Ristoratore e Piatti per mostrare il menu nella ricerca
         const risultati = await db.collection('ristoratori').aggregate([
-            { 
-                $match: { nomeRistorante: new RegExp(q, 'i') } 
-            },
-            { 
-                $lookup: { 
-                    from: 'piatti', // Nome della tua collection piatti
-                    localField: '_id', 
-                    foreignField: 'ristoranteId', 
-                    as: 'piattiMenu' 
-                } 
-            }
+            { $match: { nomeRistorante: new RegExp(q, 'i') } },
+            { $lookup: { from: 'piatti', localField: '_id', foreignField: 'ristoranteId', as: 'piattiMenu' } }
         ]).toArray();
 
         const output = risultati.map(r => { return { ...r, tipo: 'ristorante' }; });
@@ -512,9 +452,8 @@ app.get("/ricerca/ristorante", async (req, res) => {
     }
 });
 
-// 3. Ricerca Ingrediente
 app.get("/ricerca/ingrediente", async (req, res) => {
-    // #swagger.description = "Restituisce tutti i piatti che contengono l'ingrediente specificato (Requisito: ricerca piatti per ingredienti)."
+    // #swagger.description = "Ricerca per ingrediente"
     const q = req.query.q || "";
     try {
         const risultati = await db.collection('piatti').find({ 
@@ -527,9 +466,8 @@ app.get("/ricerca/ingrediente", async (req, res) => {
     }
 });
 
-// 4. Ricerca Luogo
 app.get("/ricerca/luogo", async (req, res) => {
-    // #swagger.description = "Trova i ristoranti situati in una specifica via o città (Requisito: ricerca ristorante per luogo)."
+    // #swagger.description = "Ricerca per luogo"
     const q = req.query.q || "";
     try {
         const risultati = await db.collection('ristoratori').aggregate([
@@ -542,9 +480,8 @@ app.get("/ricerca/luogo", async (req, res) => {
     }
 });
 
-// 5. Ricerca Esclusione Allergeni
 app.get("/ricerca/allergene", async (req, res) => {
-    // #swagger.description = "Filtra i piatti escludendo quelli che contengono l'allergene specificato (Requisito: ricerca piatti per allergie)."
+    // #swagger.description = "Ricerca esclusione allergene"
     const q = req.query.q || "";
     try {
         const risultati = await db.collection('piatti').find({ 
@@ -557,9 +494,8 @@ app.get("/ricerca/allergene", async (req, res) => {
     }
 });
 
-// 6. Ricerca Piatto-Ristorante
 app.get("/ricerca/piatto-ristorante", async (req, res) => {
-    // #swagger.description = "Cerca un piatto specifico e restituisce l'elenco dei ristoranti che lo servono (Requisito: ricerca ristorante per piatto)."
+    // #swagger.description = "Ricerca ristorante per piatto"
     const q = req.query.q || "";
     try {
         const risultati = await db.collection('piatti').aggregate([
@@ -583,13 +519,8 @@ app.get("/ricerca/piatto-ristorante", async (req, res) => {
     }
 });
 
-
-// ==========================================
-//                  ORDINI
-// ==========================================
-
 app.post("/ordine", async (req, res) => {
-    // #swagger.description = "Salva l'ordine, calcola i tempi (preparazione + viaggio) e il costo di consegna basato sulla distanza (OpenStreetMap)."
+    // #swagger.description = "Salva ordine"
     const clienteId = req.body.clienteId;
     const ristoranteId = req.body.ristoranteId;
     const piatti = req.body.piatti;
@@ -604,7 +535,6 @@ app.post("/ordine", async (req, res) => {
     try {
         const rId = toObjectId(ristoranteId);
         
-        // Calcoli Server
         let tempoPrep = 15;
         let tempoViaggio = 0;
         let costoConsegna = 0;
@@ -631,7 +561,6 @@ app.post("/ordine", async (req, res) => {
         const totaleFinale = parseFloat(totale) + costoConsegna;
         const durataMs = (tempoPrep + tempoViaggio) * 1000;
 
-        // Coda Ordini
         const rData = await db.collection('ristoratori').findOne({ _id: rId });
         const now = new Date();
         let inizio = now;
@@ -676,7 +605,7 @@ app.post("/ordine", async (req, res) => {
 });
 
 app.post("/ordine/preventivo", async (req, res) => {
-    // #swagger.description = "Calcola un preventivo di tempi e costi di consegna senza salvare l'ordine (utile per il carrello)."
+    // #swagger.description = "Preventivo ordine"
     try {
         const piatti = req.body.piatti;
         const rId = req.body.ristoranteId;
@@ -710,7 +639,7 @@ app.post("/ordine/preventivo", async (req, res) => {
 });
 
 app.get("/cliente/:id/ordini", async (req, res) => {
-    // #swagger.description = "Restituisce lo storico degli acquisti passati e lo stato degli ordini in corso per un cliente."
+    // #swagger.description = "Storico ordini cliente"
     const id = req.params.id;
     try {
         const ordini = await db.collection('ordini')
@@ -740,7 +669,7 @@ app.get("/cliente/:id/ordini", async (req, res) => {
 });
 
 app.get("/ristoratore/:id/ordini", async (req, res) => {
-    // #swagger.description = "Visualizza la coda di preparazione: lista degli ordini ricevuti dal ristorante ordinati per priorità."
+    // #swagger.description = "Coda ordini ristoratore"
     const id = req.params.id;
     try {
         const ordini = await db.collection('ordini').aggregate([
@@ -772,7 +701,7 @@ app.get("/ristoratore/:id/ordini", async (req, res) => {
 });
 
 app.get("/ristoratore/:id/statistiche", async (req, res) => {
-    // #swagger.description = "Calcola il totale guadagni e genera la classifica dei 5 piatti più venduti del ristorante."
+    // #swagger.description = "Statistiche ristoratore"
     const id = req.params.id;
     try {
         const ordini = await db.collection('ordini')
@@ -816,7 +745,7 @@ app.get("/ristoratore/:id/statistiche", async (req, res) => {
 });
 
 app.post('/utils/geocode', async (req, res) => {
-    // #swagger.description = "Servizio interno per convertire un indirizzo in coordinate Lat/Lon usando API OpenStreetMap."
+    // #swagger.description = "Geocoding interno"
     const c = await getCoordinates(req.body.indirizzo);
     if(c) {
         res.json(c);

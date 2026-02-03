@@ -2,155 +2,150 @@ let tipoUtente = 'cliente';
 let catalogoCompleto = [];
 let menuRistoratore = [];
 
-const validators = {
-    email: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-    piva: (piva) => /^\d{11}$/.test(piva),
-    telefono: (tel) => /^\d{8,15}$/.test(tel),
-    password: (pass) => pass.length >= 6
-};
-
-function showToast(message, type = 'danger') {
-    const container = document.getElementById('toastPlaceHolder');
-    if (!container) return alert(message);
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = `
-      <div class="toast align-items-center text-bg-${type} border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-          <div class="toast-body fw-bold">${message}</div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-      </div>`;
-    container.appendChild(wrapper.firstElementChild);
-    const toastEl = container.lastElementChild;
-    new bootstrap.Toast(toastEl).show();
-    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-}
-
 window.onload = async function() {
     try {
-        const resCat = await fetch('http://localhost:3000/categorie-catalogo');
+        const resCat = await fetch(API_URL + '/categorie-catalogo');
         const categorie = await resCat.json();
-        
-        const selCliente = document.getElementById('prefCliente');
-        const selFiltro = document.getElementById('filtroCatalogo');
-        
-        if(selCliente) selCliente.innerHTML = '<option value="">-- Seleziona --</option>';
-        if(selFiltro) selFiltro.innerHTML = '<option value="">-- Seleziona --</option>';
 
-        categorie.forEach(cat => {
-            if(selCliente) selCliente.innerHTML += `<option value="${cat}">${cat}</option>`;
-            if(selFiltro) selFiltro.innerHTML += `<option value="${cat}">${cat}</option>`;
-        });
+        const selectCliente = document.getElementById('prefCliente');
+        const selectFiltro = document.getElementById('filtroCatalogo');
 
-        const resMeals = await fetch('http://localhost:3000/catalog');
+        if (selectCliente) {
+            selectCliente.innerHTML = '<option value="">-- Seleziona --</option>';
+            categorie.forEach(function(cat) {
+                selectCliente.innerHTML += '<option value="' + cat + '">' + cat + '</option>';
+            });
+        }
+
+        if (selectFiltro) {
+            selectFiltro.innerHTML = '<option value="">-- Seleziona Categoria --</option>';
+            categorie.forEach(function(cat) {
+                selectFiltro.innerHTML += '<option value="' + cat + '">' + cat + '</option>';
+            });
+        }
+
+        const resMeals = await fetch(API_URL + '/catalog');
         catalogoCompleto = await resMeals.json();
-    } catch (e) {
-        console.error("Errore caricamento:", e);
+
+    } catch (errore) {
+        console.error("Errore:", errore);
         showToast("Errore connessione server", "danger");
     }
-};
+}
 
 function cambiaTab(tipo) {
     tipoUtente = tipo;
-    const btnC = document.getElementById('btnTabCliente');
-    const btnR = document.getElementById('btnTabRistoratore');
-    
+
     document.getElementById('divCliente').style.display = (tipo === 'cliente') ? 'block' : 'none';
     document.getElementById('divRistoratore').style.display = (tipo === 'ristoratore') ? 'block' : 'none';
 
+    const btnC = document.getElementById('btnTabCliente');
+    const btnR = document.getElementById('btnTabRistoratore');
+
     if (tipo === 'cliente') {
-        btnC.classList.add('active', 'btn-primary'); btnC.classList.remove('btn-outline-primary');
-        btnR.classList.remove('active', 'btn-primary'); btnR.classList.add('btn-outline-primary'); 
+        btnC.classList.add('active');
+        btnR.classList.remove('active');
     } else {
-        btnR.classList.add('active', 'btn-primary'); btnR.classList.remove('btn-outline-primary');
-        btnC.classList.remove('active', 'btn-primary'); btnC.classList.add('btn-outline-primary');
+        btnR.classList.add('active');
+        btnC.classList.remove('active');
     }
 }
 
-document.getElementById('filtroCatalogo')?.addEventListener('change', function() {
-    const categoriaScelta = this.value;
-    const div = document.getElementById('containerPiatti');
-    div.innerHTML = ""; 
+const filtro = document.getElementById('filtroCatalogo');
+if (filtro) {
+    filtro.addEventListener('change', function() {
+        const categoria = this.value;
+        const container = document.getElementById('containerPiatti');
+        container.innerHTML = '';
 
-    if (!categoriaScelta) return;
-    const piattiFiltrati = catalogoCompleto.filter(p => p.strCategory === categoriaScelta);
+        if (!categoria) return;
 
-    if (piattiFiltrati.length === 0) {
-        div.innerHTML = "<div class='col-12 text-center text-muted'>Nessun piatto trovato.</div>";
-        return;
-    }
+        const piattiFiltrati = catalogoCompleto.filter(function(p) {
+            return p.strCategory === categoria;
+        });
 
-    piattiFiltrati.forEach((p, index) => {
-        const giaAggiunto = menuRistoratore.some(m => m.nome === p.strMeal);
-        div.innerHTML += `
-            <div class="col-md-4 col-lg-3">
-                <div class="card h-100 shadow-sm border-0">
-                    <img src="${p.strMealThumb}" class="card-img-top" style="height: 120px; object-fit: cover;">
-                    <div class="card-body p-2 d-flex flex-column">
-                        <h6 class="card-title text-truncate" title="${p.strMeal}">${p.strMeal}</h6>
-                        <div class="mt-auto">
-                            <input type="number" id="prezzo_${index}" class="form-control form-control-sm mb-1" placeholder="Prezzo €" min="0" step="0.50" ${giaAggiunto ? 'disabled' : ''}>
-                            <input type="number" id="tempo_${index}" class="form-control form-control-sm mb-2" placeholder="Minuti" min="1" value="15" ${giaAggiunto ? 'disabled' : ''}>
-                            <button onclick='aggiungiAlMenu(${index}, "${p.strMeal.replace(/"/g, '\\"')}", "${p.strCategory}", "${p.strMealThumb}")' 
-                                    class="btn btn-sm w-100 ${giaAggiunto ? 'btn-secondary' : 'btn-outline-success'}" 
-                                    id="btn_${index}" ${giaAggiunto ? 'disabled' : ''}>
+        if (piattiFiltrati.length === 0) {
+            container.innerHTML = '<div class="col-12 text-muted text-center">Nessun piatto trovato.</div>';
+            return;
+        }
+
+        piattiFiltrati.forEach(function(p, index) {
+            const giaAggiunto = menuRistoratore.some(function(m) { return m.nome === p.strMeal; });
+
+            container.innerHTML += `
+                <div class="col-md-4 col-lg-3">
+                    <div class="card h-100 shadow-sm">
+                        <img src="${p.strMealThumb}" class="card-img-top" style="height: 120px; object-fit: cover;">
+                        <div class="card-body p-2">
+                            <h6 class="card-title text-truncate">${p.strMeal}</h6>
+                            <input type="number" id="prezzo_${index}" class="form-control form-control-sm mb-1" placeholder="Prezzo €" ${giaAggiunto ? 'disabled' : ''}>
+                            <input type="number" id="tempo_${index}" class="form-control form-control-sm mb-2" placeholder="Minuti" value="15" ${giaAggiunto ? 'disabled' : ''}>
+                            <button id="btn_${index}" class="btn btn-sm w-100 ${giaAggiunto ? 'btn-secondary' : 'btn-outline-success'}"
+                                onclick="aggiungiAlMenu(${index}, '${p.strMeal.replace(/'/g, "\\'")}', '${p.strCategory}', '${p.strMealThumb}')"
+                                ${giaAggiunto ? 'disabled' : ''}>
                                 ${giaAggiunto ? 'In Menu' : 'Aggiungi'}
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>`;
+            `;
+        });
     });
-});
+}
 
-function aggiungiAlMenu(index, nome, cat, img) {
-    const prezzo = document.getElementById(`prezzo_${index}`).value;
-    const tempo = document.getElementById(`tempo_${index}`).value;
+function aggiungiAlMenu(index, nome, categoria, immagine) {
+    const prezzo = document.getElementById('prezzo_' + index).value;
+    const tempo = document.getElementById('tempo_' + index).value;
 
     if (!prezzo || !tempo) {
-        showToast("Inserisci Prezzo e Tempo!", "warning");
+        showToast("Inserisci prezzo e tempo!", "warning");
         return;
     }
 
-    // Cerchiamo ingredienti originali
-    const piattoOriginale = catalogoCompleto.find(p => p.strMeal === nome) || {}; 
-    let listaIngredienti = [];
-    if (piattoOriginale.ingredients && Array.isArray(piattoOriginale.ingredients)) {
-        listaIngredienti = piattoOriginale.ingredients;
+    const originale = catalogoCompleto.find(function(p) { return p.strMeal === nome; }) || {};
+    let ingredienti = [];
+    
+    if (originale.ingredients && Array.isArray(originale.ingredients)) {
+        ingredienti = originale.ingredients;
     } else {
-        for(let i=1; i<=20; i++) {
-            const ing = piattoOriginale[`strIngredient${i}`];
-            if(ing && ing.trim()) listaIngredienti.push(ing);
+        for (let i = 1; i <= 20; i++) {
+            const ing = originale['strIngredient' + i];
+            if (ing && ing.trim()) ingredienti.push(ing);
         }
     }
-    
+
     menuRistoratore.push({
-        nome: nome, categoria: cat, thumb: img,
-        prezzo: parseFloat(prezzo), tempo: parseInt(tempo),
-        ingredienti: listaIngredienti.join(', '),
-        // Campi aggiuntivi per compatibilità backend
-        strMeal: nome, strCategory: cat, strMealThumb: img
+        nome: nome,
+        categoria: categoria,
+        thumb: immagine,
+        prezzo: parseFloat(prezzo),
+        tempo: parseInt(tempo),
+        ingredienti: ingredienti.join(', '),
+        strMeal: nome,
+        strCategory: categoria,
+        strMealThumb: immagine
     });
 
-    const btn = document.getElementById(`btn_${index}`);
-    btn.className = 'btn btn-sm w-100 btn-secondary';
-    btn.innerText = 'In Menu';
-    btn.disabled = true;
-    document.getElementById(`prezzo_${index}`).disabled = true;
-    document.getElementById(`tempo_${index}`).disabled = true;
+    document.getElementById('btn_' + index).className = 'btn btn-sm w-100 btn-secondary';
+    document.getElementById('btn_' + index).innerText = 'In Menu';
+    document.getElementById('btn_' + index).disabled = true;
+    document.getElementById('prezzo_' + index).disabled = true;
+    document.getElementById('tempo_' + index).disabled = true;
 
     aggiornaRiepilogo();
 }
 
 function aggiornaRiepilogo() {
     const div = document.getElementById('menuScelto');
+
     if (menuRistoratore.length === 0) {
         div.innerHTML = '<small class="text-muted">Nessun piatto aggiunto.</small>';
         return;
     }
+
     let html = '';
-    menuRistoratore.forEach(p => {
-        html += `<span class="badge bg-primary me-1 mb-1 p-2">${p.nome} <span class="badge bg-white text-primary">€${p.prezzo}</span></span>`;
+    menuRistoratore.forEach(function(p) {
+        html += '<span class="badge bg-primary me-1 mb-1">' + p.nome + ' €' + p.prezzo + '</span>';
     });
     div.innerHTML = html;
 }
@@ -158,61 +153,105 @@ function aggiornaRiepilogo() {
 async function registrati() {
     const btn = document.getElementById('btnRegistra');
     const testoOriginale = btn.innerText;
-    const email = document.getElementById('email').value.trim();
-    const pass = document.getElementById('pass').value;
-    const conf = document.getElementById('confPass').value;
 
-    if (!validators.email(email)) { showToast("Email non valida", "warning"); return; }
-    if (!validators.password(pass)) { showToast("Password min. 6 caratteri", "warning"); return; }
-    if (pass !== conf) { showToast("Le password non coincidono", "warning"); return; }
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('pass').value;
+    const conferma = document.getElementById('confPass').value;
+
+    if (!email || !email.includes('@')) {
+        showToast("Email non valida", "warning");
+        return;
+    }
+
+    if (password.length < 6) {
+        showToast("Password minimo 6 caratteri", "warning");
+        return;
+    }
+
+    if (password !== conferma) {
+        showToast("Le password non coincidono", "warning");
+        return;
+    }
 
     btn.disabled = true;
     btn.innerText = "Registrazione...";
-    
-    function resetBtn() { btn.disabled = false; btn.innerText = testoOriginale; }
 
-    let payload = { email: email, password: pass };
-    let urlDestinazione = '';
+    function resetBtn() {
+        btn.disabled = false;
+        btn.innerText = testoOriginale;
+    }
+
+    let payload = { email: email, password: password };
+    let endpoint = '';
 
     if (tipoUtente === 'cliente') {
-        urlDestinazione = 'http://localhost:3000/cliente';
         const nome = document.getElementById('nome').value.trim();
         const cognome = document.getElementById('cognome').value.trim();
-        const pref = document.getElementById('prefCliente').value;
-        
-        if(!nome || !cognome) { showToast("Inserisci nome e cognome", "warning"); resetBtn(); return; }
-        payload.nome = nome; payload.cognome = cognome; payload.preferenze = [pref]; 
+        const preferenza = document.getElementById('prefCliente').value;
+
+        if (!nome || !cognome) {
+            showToast("Inserisci nome e cognome", "warning");
+            resetBtn();
+            return;
+        }
+
+        payload.nome = nome;
+        payload.cognome = cognome;
+        payload.preferenze = preferenza ? [preferenza] : [];
+        endpoint = API_URL + '/cliente';
+
     } else {
-        urlDestinazione = 'http://localhost:3000/ristoratore';
         const nomeRist = document.getElementById('nomeRist').value.trim();
         const indirizzo = document.getElementById('indirizzo').value.trim();
         const piva = document.getElementById('piva').value.trim();
         const telefono = document.getElementById('telefono').value.trim();
 
-        if(!nomeRist || !indirizzo) { showToast("Dati ristorante incompleti", "warning"); resetBtn(); return; }
-        if(!validators.piva(piva)) { showToast("Partita IVA non valida (11 cifre)", "warning"); resetBtn(); return; }
-        if(telefono && !validators.telefono(telefono)) { showToast("Telefono non valido", "warning"); resetBtn(); return; }
-        if(menuRistoratore.length === 0) { showToast("Aggiungi almeno un piatto!", "warning"); resetBtn(); return; }
+        if (!nomeRist || !indirizzo) {
+            showToast("Completa i dati del ristorante", "warning");
+            resetBtn();
+            return;
+        }
 
-        payload.nomeRistorante = nomeRist; payload.indirizzo = indirizzo;
-        payload.piva = piva; payload.telefono = telefono; payload.piatti = menuRistoratore;
+        if (!/^\d{11}$/.test(piva)) {
+            showToast("P.IVA deve essere di 11 cifre", "warning");
+            resetBtn();
+            return;
+        }
+
+        if (menuRistoratore.length === 0) {
+            showToast("Aggiungi almeno un piatto al menu!", "warning");
+            resetBtn();
+            return;
+        }
+
+        payload.nomeRistorante = nomeRist;
+        payload.indirizzo = indirizzo;
+        payload.piva = piva;
+        payload.telefono = telefono;
+        payload.piatti = menuRistoratore;
+        endpoint = API_URL + '/ristoratore';
     }
 
     try {
-        const res = await fetch(urlDestinazione, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        const risposta = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
-        const data = await res.json();
 
-        if (res.ok) {
-            showToast("Registrazione OK!", "success");
-            setTimeout(() => window.location.href = 'login.html', 1500);
+        const dati = await risposta.json();
+
+        if (risposta.ok) {
+            showToast("Registrazione completata!", "success");
+            setTimeout(function() {
+                window.location.href = 'login.html';
+            }, 1500);
         } else {
-            showToast(data.message || "Errore server", "danger");
-            resetBtn(); 
+            showToast(dati.message || "Errore registrazione", "danger");
+            resetBtn();
         }
-    } catch (e) {
+    } catch (errore) {
         showToast("Errore di connessione", "danger");
-        resetBtn(); 
+        resetBtn();
     }
 }
