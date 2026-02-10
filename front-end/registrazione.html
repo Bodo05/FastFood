@@ -54,23 +54,30 @@
                         </div>
 
                         <!-- Sezione CLIENTE -->
-                        <div id="divCliente">
-                            <h5 class="mb-3">I tuoi Dati</h5>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">Nome</label>
-                                    <input type="text" class="form-control" id="nome">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Cognome</label>
-                                    <input type="text" class="form-control" id="cognome">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Categoria Preferita</label>
-                                    <select class="form-select" id="prefCliente">
-                                        <option value="">Caricamento...</option>
+                                                <div id="divCliente">
+                            <div class="mb-3">
+                                <label class="form-label">Nome *</label>
+                                <input type="text" class="form-control" id="nome" placeholder="Mario">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Cognome *</label>
+                                <input type="text" class="form-control" id="cognome" placeholder="Rossi">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Metodo di Pagamento *</label>
+                                <select class="form-select" id="metodoPagamento">
+                                    <option value="">-- Seleziona --</option>
+                                    <option value="carta_credito">Carta di Credito</option>
+                                    <option value="prepagata">Carta Prepagata</option>
+                                </select>
+                                <div class="form-text text-muted">Richiesto per la configurazione dell'account.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Preferenza Alimentare (Opzionale)</label>
+                                <select class="form-select" id="prefCliente">
                                     </select>
-                                </div>
                             </div>
                         </div>
 

@@ -486,6 +486,11 @@ app.get("/ricerca/luogo", async (req, res) => {
 app.get("/ricerca/allergene", async (req, res) => {
     // #swagger.description = "Ricerca esclusione allergene"
     const q = req.query.q || "";
+    // se strimga vuota restituisco tutti i piatti
+    if (!q) {
+        const tutti = await db.collection('piatti').find({ ristoranteId: { $ne: null } }).toArray();
+        return res.json(tutti.map(p => ({ ...p, tipo: 'piatto' })));
+    }
     try {
         const risultati = await db.collection('piatti').find({ 
             ristoranteId: { $ne: null }, 

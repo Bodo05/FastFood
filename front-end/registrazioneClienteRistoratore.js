@@ -187,7 +187,9 @@ async function registrati() {
     if (tipoUtente === 'cliente') {
         const nome = document.getElementById('nome').value.trim();
         const cognome = document.getElementById('cognome').value.trim();
-        const preferenza = document.getElementById('prefCliente').value;
+        const pref = document.getElementById('prefCliente').value;
+ 
+        const pagamento = document.getElementById('metodoPagamento').value;
 
         if (!nome || !cognome) {
             showToast("Inserisci nome e cognome", "warning");
@@ -195,12 +197,21 @@ async function registrati() {
             return;
         }
 
+        if (!pagamento) {
+            showToast("Seleziona un metodo di pagamento!", "warning");
+            resetBtn();
+            return;
+        }
+
         payload.nome = nome;
         payload.cognome = cognome;
-        payload.preferenze = preferenza ? [preferenza] : [];
-        endpoint = API_URL + '/cliente';
+        payload.metodoPagamento = pagamento; // Invio al backend
+        payload.preferenze = pref ? [pref] : [];
+        
+        endpoint = API_URL + '/cliente'; // Assicurati che la rotta sia corretta col tuo index.js
+    }
 
-    } else {
+    else {
         const nomeRist = document.getElementById('nomeRist').value.trim();
         const indirizzo = document.getElementById('indirizzo').value.trim();
         const piva = document.getElementById('piva').value.trim();
