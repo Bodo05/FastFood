@@ -22,6 +22,7 @@ async function caricaDati() {
         document.getElementById('nome').value = utente.nome || '';
         document.getElementById('cognome').value = utente.cognome || '';
         document.getElementById('email').value = utente.email || '';
+        document.getElementById('metodoPagamentoProfilo').value = utente.metodoPagamento || 'carta_credito';
         
         if (utente.preferenze && utente.preferenze.length > 0) {
             select.value = utente.preferenze[0];
