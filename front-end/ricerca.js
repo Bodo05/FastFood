@@ -1,7 +1,4 @@
-/**
- * FASTFOOD - Ricerca Piatti
- */
-
+//appena carico pagina controllo se ci sono parametri nell'indirizzo
 document.addEventListener('DOMContentLoaded', function() {
     aggiornaPlaceholder();
     controllaParametriUrl();
@@ -24,6 +21,7 @@ function aggiornaPlaceholder() {
 }
 
 function controllaParametriUrl() {
+    //legge url,riempie barra di ricerca e avvia
     const params = new URLSearchParams(window.location.search);
     const query = params.get('q');
     const ristorante = params.get('ristorante');
@@ -40,6 +38,7 @@ function controllaParametriUrl() {
 }
 
 async function eseguiRicerca() {
+    if (checkLogin('cliente') === false) return;
     const tipo = document.getElementById('tipoRicerca').value;
     const query = document.getElementById('inputRicerca').value.trim();
     const container = document.getElementById('containerRisultati');
@@ -65,9 +64,10 @@ async function eseguiRicerca() {
         case 'allergene': endpoint = `/ricerca/allergene?q=${qEnc}`; break;
         case 'piatto_ristorante': endpoint = `/ricerca/piatto-ristorante?q=${qEnc}`; break;
     }
+    //costruisco query in base al tipo di ricerca
 
     try {
-        // Usa API_URL globale da utils.js
+        //chiamo api e salvo in risposta
         const risposta = await fetch(API_URL + endpoint);
         
         if (!risposta.ok) throw new Error("Errore server");
@@ -83,6 +83,10 @@ async function eseguiRicerca() {
     }
 }
 
+//la funzione mi permette di mostrare in modo differenze,  se cerco per chi fa questo piatto
+//ho il ristorante cin ka lista dei piatti, se cerco per citta mostro i ristoranti e 
+//posso vedere il menu tramite un bottone, altrimenti se per ingrediente mostro
+//i singoli piatti
 function mostraRisultati(risultati, tipo) {
     const container = document.getElementById('containerRisultati');
     

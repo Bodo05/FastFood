@@ -1,8 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-const { MongoClient, ObjectId } = require('mongodb');
-const axios = require('axios');
+const express = require('express'); //gestisce rotte http
+const cors = require('cors'); //abilita richieste dal frontend
+const { MongoClient, ObjectId } = require('mongodb'); //per connettersi al database
+const axios = require('axios'); //usato per APi di OpenStreetMap per consegna domicilio
 const fs = require('fs');
+//documentazione automatica
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger_output.json');
 
@@ -11,16 +12,19 @@ const app = express();
 // API per documentazione api
 app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
+app.use(cors());
+app.use(express.json());
+
+
 const port = 3000;
 const mongoURL = "mongodb+srv://admin:admin@cluster0.fczult8.mongodb.net/";
 const dbName = "fastfood";
 
-app.use(cors());
-app.use(express.json());
 
 const client = new MongoClient(mongoURL);
 let db;
 
+//trasforma le stringhe id in oggetti di mongoDb
 const toObjectId = (id) => {
     try {
         return new ObjectId(id);
@@ -29,6 +33,7 @@ const toObjectId = (id) => {
     }
 };
 
+//trasforma la stringa di indirizzo in coordinate lat e long
 async function getCoordinates(address) {
     if (!address) return null;
     try {
@@ -57,6 +62,7 @@ function calcolaDistanza(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+//fa partire il server e si connette al database
 async function startServer() {
     try {
         await client.connect();
@@ -66,6 +72,7 @@ async function startServer() {
         const catalogCollection = db.collection('catalog');
         const count = await catalogCollection.countDocuments();
 
+        //se collection vuota significa che va caricato il consenuto di meals1.json nella collection
         if (count === 0 && fs.existsSync('meals1.json')) {
             console.log("Caricamento dati iniziali...");
             const data = fs.readFileSync('meals1.json', 'utf8');
@@ -103,7 +110,7 @@ async function startServer() {
 startServer();
 
 app.post("/cliente", async (req, res) => {
-    // #swagger.description = "Registrazione utente"
+    // #swagger.description = "Registrazione cliente"
     const nome = req.body.nome;
     const cognome = req.body.cognome;
     const email = req.body.email;

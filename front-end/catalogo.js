@@ -1,8 +1,6 @@
 // Verifica login ristoratore
+if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 var ristoratoreId = localStorage.getItem('_id');
-if (!ristoratoreId || localStorage.getItem('userType') !== 'ristoratore') {
-    window.location.href = 'login.html';
-}
 
 // Lista dei piatti già nel menu (per evitare duplicati)
 var piattiNelMenu = [];

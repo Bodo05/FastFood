@@ -1,28 +1,20 @@
-/**
- * FASTFOOD - Pagina Cliente
- */
-
+if (checkLogin('cliente') === false) throw new Error("Redirecting...");
 const CLIENT_ID = localStorage.getItem('_id');
-
-// Verifica Login
-if (!CLIENT_ID || localStorage.getItem('userType') !== 'cliente') {
-    window.location.href = 'login.html';
-}
 
 window.onload = caricaPiatti;
 
 async function caricaPiatti() {
     try {
-        // 1. Preferenze Cliente
+        // vengono presi i dati del cliente tramite api /cliente/:id
         const resCliente = await fetch(API_URL + '/cliente/' + CLIENT_ID);
         const cliente = await resCliente.json();
         const preferenze = cliente.preferenze || [];
 
-        // 2. Tutti i Piatti
+        //carico tutti i piatti in resPiatti
         const resPiatti = await fetch(API_URL + '/meals');
         const piatti = await resPiatti.json();
 
-        // 3. Filtro Preferenze
+        //se l'utente ha scelto una preferenza i piatti vengono filtrati
         let daVisualizzare = piatti;
         if (preferenze.length > 0) {
             const filtrati = piatti.filter(function(p) {
@@ -35,7 +27,7 @@ async function caricaPiatti() {
             }
         }
 
-        // 4. Titolo
+        //se l'utente ha preferenze viene mostrata anche la categoria, altrimenti messaggio comune
         const titolo = document.querySelector('h4');
         if (titolo) {
             titolo.textContent = preferenze.length > 0 
@@ -59,7 +51,7 @@ function mostraPiatti(piatti) {
         container.innerHTML = '<div class="col-12"><div class="alert alert-info">Nessun piatto disponibile.</div></div>';
         return;
     }
-
+    //costruzione delle card con i piatti 
     piatti.forEach(function(p) {
         const immagine = p.thumb || 'https://via.placeholder.com/300x200?text=No+Image';
         const prezzo = p.prezzo ? '€' + parseFloat(p.prezzo).toFixed(2) : 'N/D';
@@ -84,6 +76,7 @@ function mostraPiatti(piatti) {
     });
 }
 
+//la funzione aggiungi carrello fa si che se viene selezionato un piatto venga aggiunto al carrello nel localStorage
 function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, ristoranteNome) {
     let carrello = JSON.parse(localStorage.getItem('carrello') || '[]');
     

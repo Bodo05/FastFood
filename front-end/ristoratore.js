@@ -1,9 +1,5 @@
+if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const rId = localStorage.getItem('_id');
-if (!rId || localStorage.getItem('userType') !== 'ristoratore') {
-    alert('Login richiesto');
-    window.location.href = 'login.html';
-}
-
 document.addEventListener('DOMContentLoaded', caricaMenu);
 
 async function caricaMenu() {

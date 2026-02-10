@@ -1,8 +1,5 @@
+if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const userId = localStorage.getItem('_id');
-if (!userId) {
-    alert("Sessione scaduta.");
-    window.location.href = 'login.html';
-}
 
 document.addEventListener('DOMContentLoaded', caricaProfilo);
 

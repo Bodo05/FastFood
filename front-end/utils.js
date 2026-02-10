@@ -1,5 +1,7 @@
 const API_URL = 'http://localhost:3000';
 
+
+//funzione che permette di mostrare i risultati delle operazioni fatte (primo parametro messaggio, secondo il tipo che gestisce il colore del popup)
 function showToast(message, type = 'success') {
     const container = document.getElementById('toastPlaceHolder');
     if (!container) {
@@ -8,6 +10,7 @@ function showToast(message, type = 'success') {
     }
     
     const toast = document.createElement('div');
+    //type indica il colore: success verde...
     toast.className = `toast align-items-center text-bg-${type} border-0 mb-2 shadow`;
     toast.innerHTML = `
         <div class="d-flex">
@@ -21,13 +24,13 @@ function showToast(message, type = 'success') {
     
     toast.addEventListener('hidden.bs.toast', () => toast.remove());
 }
-
+// gestione della ricerca direttamente dalla navbar
 function effettuaRicercaNavbar() {
     const input = document.getElementById('navbarSearchInput');
-    const query = input ? input.value.trim() : '';
+    const query = input ? input.value.trim() : ''; //se c'è imput fa il trim, altriemnti vuoto
 
     if (!query) {
-        showToast('Inserisci un termine di ricerca', 'warning');
+        showToast('Inserisci un termine di ricerca', 'warning'); //chiamata alla funzione in utils che mostra il tost rosso 
         return;
     }
 
@@ -41,6 +44,7 @@ function effettuaRicercaNavbar() {
     }
 }
 
+// funzione utilizzata in ogni pagina js per gestire l'accesso di itente o ristoratore al sito
 function checkLogin(tipoRichiesto) {
     const userId = localStorage.getItem('_id');
     const userType = localStorage.getItem('userType');
@@ -60,6 +64,7 @@ function checkLogin(tipoRichiesto) {
     return true;
 }
 
+//in ogni pagina è possibile fare logout e questa funzione pulisce il local storage e riporta a pagina di login
 function logout() {
     localStorage.clear();
     window.location.href = 'login.html';

@@ -2,8 +2,10 @@ let tipoUtente = 'cliente';
 let catalogoCompleto = [];
 let menuRistoratore = [];
 
+//appena si apre la pagina
 window.onload = async function() {
     try {
+        // prendo le categorie disponibili e le salvo in categorie
         const resCat = await fetch(API_URL + '/categorie-catalogo');
         const categorie = await resCat.json();
 
@@ -24,6 +26,7 @@ window.onload = async function() {
             });
         }
 
+        //prendo il catalogo e lo salvo in catalogoCompleto
         const resMeals = await fetch(API_URL + '/catalog');
         catalogoCompleto = await resMeals.json();
 
@@ -34,6 +37,7 @@ window.onload = async function() {
 }
 
 function cambiaTab(tipo) {
+    //chiamata quando scelgo cliente o ristoratore
     tipoUtente = tipo;
 
     document.getElementById('divCliente').style.display = (tipo === 'cliente') ? 'block' : 'none';
@@ -41,7 +45,7 @@ function cambiaTab(tipo) {
 
     const btnC = document.getElementById('btnTabCliente');
     const btnR = document.getElementById('btnTabRistoratore');
-
+    //permette di nascondereil div di un form e mostrare l'altro 
     if (tipo === 'cliente') {
         btnC.classList.add('active');
         btnR.classList.remove('active');
@@ -51,6 +55,7 @@ function cambiaTab(tipo) {
     }
 }
 
+//prendo i piatti scaricati all'inizio e creo delle card per poterli aggiungere al menu
 const filtro = document.getElementById('filtroCatalogo');
 if (filtro) {
     filtro.addEventListener('change', function() {
@@ -92,7 +97,7 @@ if (filtro) {
         });
     });
 }
-
+//se clicco aggiungi al menu il piatto viene copiato dall'array catalogoCompleto all'array menù ristoratore
 function aggiungiAlMenu(index, nome, categoria, immagine) {
     const prezzo = document.getElementById('prezzo_' + index).value;
     const tempo = document.getElementById('tempo_' + index).value;
@@ -135,6 +140,7 @@ function aggiungiAlMenu(index, nome, categoria, immagine) {
     aggiornaRiepilogo();
 }
 
+//aggiorna la lista dei piatti aggiunti,
 function aggiornaRiepilogo() {
     const div = document.getElementById('menuScelto');
 
@@ -154,6 +160,7 @@ async function registrati() {
     const btn = document.getElementById('btnRegistra');
     const testoOriginale = btn.innerText;
 
+    //prendo i valori in comune
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('pass').value;
     const conferma = document.getElementById('confPass').value;
@@ -184,32 +191,48 @@ async function registrati() {
     let payload = { email: email, password: password };
     let endpoint = '';
 
+    //in base al tipo utente decido quali sono i parametri da salvare
     if (tipoUtente === 'cliente') {
         const nome = document.getElementById('nome').value.trim();
         const cognome = document.getElementById('cognome').value.trim();
         const pref = document.getElementById('prefCliente').value;
- 
-        const pagamento = document.getElementById('metodoPagamento').value;
+        const metodo = document.getElementById('metodoPagamento').value;
+        const numeroCarta = document.getElementById('regNumeroCarta').value.trim();
+        const cvv = document.getElementById('regCVV').value.trim();
+        const scadenza = document.getElementById('regScadenza').value.trim();
 
         if (!nome || !cognome) {
             showToast("Inserisci nome e cognome", "warning");
-            resetBtn();
-            return;
+            resetBtn(); return;
         }
 
-        if (!pagamento) {
-            showToast("Seleziona un metodo di pagamento!", "warning");
-            resetBtn();
-            return;
+        // VALIDAZIONE CARTA
+        if (!/^\d{16}$/.test(numeroCarta)) {
+            showToast("Il numero carta deve essere di 16 cifre", "warning");
+            resetBtn(); return;
+        }
+        if (!/^\d{3}$/.test(cvv)) {
+            showToast("Il CVV deve essere di 3 cifre", "warning");
+            resetBtn(); return;
+        }
+        if (!scadenza) {
+            showToast("Inserisci la scadenza MM/YY", "warning");
+            resetBtn(); return;
         }
 
         payload.nome = nome;
         payload.cognome = cognome;
-        payload.metodoPagamento = pagamento; // Invio al backend
+        payload.metodoPagamento = metodo;
         payload.preferenze = pref ? [pref] : [];
         
-        endpoint = API_URL + '/cliente'; // Assicurati che la rotta sia corretta col tuo index.js
-    }
+        payload.datiCarta = {
+            numero: numeroCarta,
+            cvv: cvv,
+            scadenza: scadenza
+        };
+        
+        endpoint = API_URL + '/cliente';
+    } 
 
     else {
         const nomeRist = document.getElementById('nomeRist').value.trim();
@@ -243,6 +266,7 @@ async function registrati() {
         endpoint = API_URL + '/ristoratore';
     }
 
+    //api di registrazione costruita in base alla tipologia di utente e di conseguenza ai parametri inseriti
     try {
         const risposta = await fetch(endpoint, {
             method: 'POST',
@@ -252,6 +276,7 @@ async function registrati() {
 
         const dati = await risposta.json();
 
+        //se mi sono registrato passo alla pagina di login
         if (risposta.ok) {
             showToast("Registrazione completata!", "success");
             setTimeout(function() {

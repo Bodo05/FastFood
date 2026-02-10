@@ -1,7 +1,5 @@
+if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const rId = localStorage.getItem('_id');
-if (!rId) {
-    window.location.href = 'login.html';
-}
 
 document.addEventListener('DOMContentLoaded', caricaOrdini);
 

@@ -1,7 +1,5 @@
+if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const rId = localStorage.getItem('_id');
-if (!rId || localStorage.getItem('userType') !== 'ristoratore') {
-    window.location.href = 'login.html';
-}
 
 const urlParams = new URLSearchParams(window.location.search);
 const piattoId = urlParams.get('piattoId');

@@ -8,69 +8,95 @@
     <link href="common.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-    <!-- Carico la navbar grazie all'inclusione di navbar.js negli script -->
     <div id="navbar-placeholder"></div>
     <div class="toast-box" id="toastPlaceHolder"></div>
 
-    <main class="container mt-4">
+    <main class="container mt-4 mb-5">
         <h3 class="mb-4">Il Tuo Carrello</h3>
         
-        <!-- Lista piatti nel carrello -->
         <div id="carrelloContainer" class="mb-4"></div>
 
-        <!-- Azioni carrello -->
-        <div id="azioniCarrello" class="card mb-4" style="display: none;">
+        <div id="azioniCarrello" class="card mb-4 border-0 shadow-sm" style="display: none;">
             <div class="card-body d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Totale: €<span id="totale">0.00</span></h4>
                 <div>
                     <button class="btn btn-outline-danger me-2" onclick="svuotaCarrello()">Svuota</button>
-                    <button class="btn btn-success" onclick="mostraCheckout()">Procedi all'ordine</button>
+                    <button class="btn btn-primary btn-lg" onclick="mostraCheckout()">Procedi al Checkout</button>
                 </div>
             </div>
         </div>
 
-        <!-- Sezione Checkout -->
-        <div id="checkoutSection" class="card border-primary mb-5" style="display: none;">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Completa l'ordine</h5>
-            </div>
-            <div class="card-body">
-                <form id="formOrdine" onsubmit="event.preventDefault(); inviaOrdine();">
-                    
-                    <!-- Tipo consegna -->
-                    <div class="mb-3">
-                        <label class="form-label">Tipo consegna:</label>
-                        <div class="btn-group w-100">
-                            <input type="radio" class="btn-check" name="tipoConsegna" id="btnDomicilio" value="domicilio" checked onchange="toggleIndirizzo()">
-                            <label class="btn btn-outline-primary" for="btnDomicilio">🏠 Domicilio</label>
+        <div id="checkoutSection" class="row" style="display: none;">
+            <div class="col-md-8 mx-auto">
+                <div class="card shadow border-0">
+                    <div class="card-body p-4">
+                        <h4 class="mb-4 text-center">Conferma Ordine</h4>
+                        
+                        <form id="formCheckout" onsubmit="inviaOrdine(event)">
+                            
+                            <div class="mb-4 text-center">
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="tipoConsegna" id="domicilio" value="domicilio" checked onchange="toggleIndirizzo()">
+                                    <label class="btn btn-outline-primary" for="domicilio">🛵 A Domicilio</label>
+                                    
+                                    <input type="radio" class="btn-check" name="tipoConsegna" id="asporto" value="asporto" onchange="toggleIndirizzo()">
+                                    <label class="btn btn-outline-primary" for="asporto">🛍️ Asporto (Ritiro)</label>
+                                </div>
+                            </div>
 
-                            <input type="radio" class="btn-check" name="tipoConsegna" id="btnAsporto" value="asporto" onchange="toggleIndirizzo()">
-                            <label class="btn btn-outline-primary" for="btnAsporto">🛍️ Asporto</label>
-                        </div>
+                            <div class="form-floating mb-4" id="divIndirizzo">
+                                <input type="text" class="form-control" id="indirizzo" placeholder="Via Roma 1" onblur="calcolaPreventivo()">
+                                <label for="indirizzo">Indirizzo di Consegna</label>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <h5 class="mb-3">Metodo di Pagamento</h5>
+                            
+                            <div class="form-floating mb-3">
+                                <select class="form-select" id="selectMetodoPagamento">
+                                    <option value="carta_credito">💳 Carta di Credito</option>
+                                    <option value="prepagata">💳 Carta Prepagata</option>
+                                </select>
+                                <label for="selectMetodoPagamento">Tipo Carta</label>
+                            </div>
+
+                            <div class="bg-light p-3 rounded-3">
+                                <div class="form-floating mb-2">
+                                    <input type="text" class="form-control border-0 shadow-sm" id="numeroCarta" placeholder="0000 0000 0000 0000" maxlength="19">
+                                    <label for="numeroCarta">Numero Carta</label>
+                                </div>
+
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control border-0 shadow-sm" id="scadenzaCarta" placeholder="MM/YY" maxlength="5">
+                                            <label for="scadenzaCarta">Scadenza</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="form-floating">
+                                            <input type="password" class="form-control border-0 shadow-sm" id="cvvCarta" placeholder="123" maxlength="3">
+                                            <label for="cvvCarta">CVV</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="boxPreventivo" class="mt-4 p-3 bg-white border rounded" style="display: none;">
+                                <div class="d-flex justify-content-between text-muted"><span>Cibo:</span><span id="prevCibo">-</span></div>
+                                <div class="d-flex justify-content-between text-danger fw-bold"><span>Spedizione:</span><span id="prevCosto">-</span></div>
+                                <div class="d-flex justify-content-between fw-bold fs-5 mt-2 pt-2 border-top">
+                                    <span>TOTALE:</span><span id="prevTotale">-</span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100 py-3 fw-bold mt-4 shadow" id="btnPaga">
+                                PAGAMENTO SICURO E ORDINA
+                            </button>
+                        </form>
                     </div>
-
-                    <!-- Indirizzo (solo domicilio) -->
-                    <div class="mb-3" id="divIndirizzo">
-                        <label class="form-label">Indirizzo di consegna</label>
-                        <input type="text" class="form-control" id="indirizzo" placeholder="Via Roma 10, Milano" onblur="calcolaPreventivo()">
-                    </div>
-
-                    <!-- Preventivo -->
-                    <div id="boxPreventivo" class="alert alert-warning" style="display: none;">
-                        <h6 class="fw-bold">Riepilogo costi</h6>
-                        <hr>
-                        <div class="d-flex justify-content-between"><span>Preparazione:</span><span id="prevPrep">-</span></div>
-                        <div class="d-flex justify-content-between"><span>Tempo viaggio:</span><span id="prevViaggio">-</span></div>
-                        <div class="d-flex justify-content-between text-danger"><span>Costo spedizione:</span><span id="prevCosto">-</span></div>
-                        <div class="d-flex justify-content-between fw-bold fs-5 mt-2 pt-2 border-top">
-                            <span>TOTALE FINALE:</span><span id="prevTotale">-</span>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-success w-100 py-3 fw-bold" id="btnPaga" disabled>
-                        CONFERMA ORDINE
-                    </button>
-                </form>
+                </div>
             </div>
         </div>
     </main>

@@ -8,17 +8,17 @@
     <link href="common.css" rel="stylesheet">
 </head>
 <body class="bg-auth">
-    <!-- Navbar semplice -->
+    <!-- navbar comune a ogni pagina -->
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
             <span class="navbar-brand">FastFood Project</span>
         </div>
     </nav>
 
-    <!-- Notifiche -->
+    <!-- toastbox per notifiche comune a ogni pagina -->
     <div class="toast-box" id="toastPlaceHolder"></div>
 
-    <!-- Form Login -->
+    <!-- form login -->
     <main class="container">
         <div class="row justify-content-center">
             <div class="col-md-5">
@@ -27,7 +27,7 @@
                         <h3 class="text-center mb-4">Accedi</h3>
 
                         <form id="loginForm">
-                            <!-- Tipo utente -->
+                            <!-- tipo utente con radio button -->
                             <div class="mb-3 text-center">
                                 <div class="btn-group">
                                     <input type="radio" class="btn-check" name="userType" id="tipoCliente" value="cliente" checked>
@@ -38,22 +38,23 @@
                                 </div>
                             </div>
 
-                            <!-- Email -->
+                            <!-- campo inserimento email -->
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
                                 <input type="email" class="form-control" id="email" required>
                             </div>
 
-                            <!-- Password -->
+                            <!-- campo inserimento password -->
                             <div class="mb-3">
                                 <label class="form-label">Password</label>
                                 <input type="password" class="form-control" id="password" required>
                             </div>
 
-                            <!-- Pulsante -->
+                            <!-- pulsante di invio -->
                             <button type="submit" class="btn btn-primary w-100" id="btnLogin">Accedi</button>
                         </form>
 
+                        <!-- link che riporta alla pagina di registrazione -->
                         <hr>
                         <p class="text-center mb-0">
                             Non hai un account? <a href="registrazione.html">Registrati</a>

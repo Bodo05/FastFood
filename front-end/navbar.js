@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
+    //al caricamento della pagina
     const placeholder = document.getElementById('navbar-placeholder');
     if (!placeholder) return;
 
-    // prendo dal local storage se utente o ristoratore e ID
+    // prendo dal local storage se cliente o ristoratore e ID
     const userType = localStorage.getItem('userType');
     const userId = localStorage.getItem('_id');
     
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
+    //costruzione della navbar con le indicazioni precedenti
     placeholder.innerHTML = `
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 mb-4">
         <div class="container-fluid">
@@ -56,9 +58,10 @@ document.addEventListener('DOMContentLoaded', function() {
     </nav>
     `;
 
+    // prende la parte dopo l'ultimo slash (pagina corrente). cerco nella navbar un link che ha come attributo pagina, se lo trovo evidenzio il link
     const pagina = window.location.pathname.split('/').pop();
     const linkAttivo = placeholder.querySelector(`a[href="${pagina}"]`);
     if (linkAttivo) {
-        linkAttivo.classList.add('active', 'fw-bold');
+        linkAttivo.classList.add('active', 'fw-bold'); //per evidenziare
     }
 });

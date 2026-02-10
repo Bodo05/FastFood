@@ -30,10 +30,28 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Metodo Pagamento</label>
-                            <select class="form-select" id="metodoPagamentoProfilo">
+                            <select class="form-select" id="metodoPagamento">
                                 <option value="carta_credito">Carta di Credito</option>
                                 <option value="prepagata">Carta Prepagata</option>
                             </select>
+                            </div>
+
+                            <div class="card p-3 mb-3 border">
+                            <h6 class="mb-2 text-primary">Dati Carta Salvati</h6>
+                            <div class="mb-2">
+                                <label class="form-label small">Numero Carta</label>
+                                <input type="text" class="form-control" id="profNumeroCarta" maxlength="16">
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label small">CVV</label>
+                                    <input type="text" class="form-control" id="profCVV" maxlength="3">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Scadenza</label>
+                                    <input type="text" class="form-control" id="profScadenza" maxlength="5">
+                                </div>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Email</label>

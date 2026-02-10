@@ -1,8 +1,5 @@
+if (checkLogin('cliente') === false) throw new Error("Redirecting...");
 const userId = localStorage.getItem('_id');
-if (!userId || localStorage.getItem('userType') !== 'cliente') {
-    window.location.href = 'login.html';
-}
-
 document.addEventListener('DOMContentLoaded', caricaDati);
 
 async function caricaDati() {
@@ -22,8 +19,20 @@ async function caricaDati() {
         document.getElementById('nome').value = utente.nome || '';
         document.getElementById('cognome').value = utente.cognome || '';
         document.getElementById('email').value = utente.email || '';
-        document.getElementById('metodoPagamentoProfilo').value = utente.metodoPagamento || 'carta_credito';
+        document.getElementById('metodoPagamento').value = utente.metodoPagamento || 'carta_credito';
+
+        if (utente.datiCarta) {
+            document.getElementById('profNumeroCarta').value = utente.datiCarta.numero || '';
+            document.getElementById('profCVV').value = utente.datiCarta.cvv || '';
+            document.getElementById('profScadenza').value = utente.datiCarta.scadenza || '';
+        }
         
+        if (utente.metodoPagamento) {
+            document.getElementById('metodoPagamento').value = utente.metodoPagamento;
+        } else {
+            document.getElementById('metodoPagamento').value = 'carta_credito';
+        }
+
         if (utente.preferenze && utente.preferenze.length > 0) {
             select.value = utente.preferenze[0];
         }
@@ -81,7 +90,16 @@ function mostraOrdini(ordini) {
 async function aggiorna() {
     const nome = document.getElementById('nome').value.trim();
     const cognome = document.getElementById('cognome').value.trim();
+    const metodo = document.getElementById('metodoPagamento').value;
     const preferenza = document.getElementById('categoriaPreferita').value;
+    const numCarta = document.getElementById('profNumeroCarta').value.trim();
+    const cvv = document.getElementById('profCVV').value.trim();
+    const scadenza = document.getElementById('profScadenza').value.trim();
+
+    if (numCarta && !/^\d{16}$/.test(numCarta)) {
+        showToast("Numero carta non valido (16 cifre)", "warning");
+        return;
+    }
 
     try {
         const risposta = await fetch(API_URL + '/cliente/' + userId, {
@@ -90,12 +108,18 @@ async function aggiorna() {
             body: JSON.stringify({
                 nome: nome,
                 cognome: cognome,
-                preferenze: preferenza ? [preferenza] : []
+                metodoPagamento: metodo,
+                preferenze: preferenza ? [preferenza] : [],
+                datiCarta: {
+                    numero: numCarta,
+                    cvv: cvv,
+                    scadenza: scadenza
+                }
             })
         });
 
         if (risposta.ok) {
-            showToast('Profilo aggiornato!', 'success');
+            showToast('Profilo e Dati Carta aggiornati!', 'success');
         } else {
             showToast('Errore aggiornamento', 'warning');
         }

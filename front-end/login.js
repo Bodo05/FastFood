@@ -1,3 +1,4 @@
+//aseptta finche login non è caricata
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('loginForm');
     if (form) {
@@ -9,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function login() {
+    //prendo i valori tramite id oggetti dell'html
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const btn = document.getElementById('btnLogin');
@@ -18,12 +20,15 @@ async function login() {
         return;
     }
 
+    //istruzion i per verificare quale delle due opzioni è stata scelta, nel caso di imprevisti è previsto l'uso di cliente
     const tipoRadio = document.querySelector('input[name="userType"]:checked');
     const tipo = tipoRadio ? tipoRadio.value : 'cliente';
 
+    //per evitare du fare piu submit disabilito il bottone 
     btn.disabled = true;
     btn.innerText = "Accesso in corso...";
 
+    //costruisco endpoint per api in base alla tipologia di utente
     const endpoint = tipo === 'ristoratore' 
         ? API_URL + '/ristoratore/login' 
         : API_URL + '/cliente/login';
@@ -37,12 +42,14 @@ async function login() {
 
         const dati = await risposta.json();
 
+        //se andata a buon fine setto nel local storage i parametri id e tipologia utente
         if (risposta.ok) {
             localStorage.setItem('_id', dati._id);
             localStorage.setItem('userType', tipo);
 
             showToast("Login effettuato!", "success");
             
+            //in base alla tipologia di utente mi ridirigo alla loro pagina home predefinita dopo un delay di 1,5s
             setTimeout(function() {
                 if (tipo === 'ristoratore') {
                     window.location.href = 'ristoratore.html';
@@ -51,6 +58,7 @@ async function login() {
                 }
             }, 1500);
         } else {
+            //se non va a buon fine mostro notifica e riabilito il bottone
             showToast(dati.message || "Credenziali non valide", "danger");
             btn.disabled = false;
             btn.innerText = "Accedi";
