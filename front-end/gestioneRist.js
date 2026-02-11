@@ -1,12 +1,16 @@
+//controlla che ristoratore sia loggato
 if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const userId = localStorage.getItem('_id');
 
+//aspetta che la pagina sia carica per chiamare la funzione caricaProfilo
 document.addEventListener('DOMContentLoaded', caricaProfilo);
 
 async function caricaProfilo() {
     try {
+        //prendo le informazioni de, ristoratore dal database
         const risposta = await fetch(API_URL + '/ristoratore/' + userId);
         
+        //se andata a buon fine riempio le caselle di testo con i valori appena presi
         if (risposta.ok) {
             const dati = await risposta.json();
             document.getElementById('nomeRistorante').value = dati.nomeRistorante || '';
@@ -20,6 +24,7 @@ async function caricaProfilo() {
     }
 }
 
+//se schiaccio il salva modifiche viene svolta questa funzione
 const form = document.getElementById('formProfilo');
 if (form) {
     form.addEventListener('submit', async function(e) {
@@ -30,6 +35,8 @@ if (form) {
         const telefono = document.getElementById('telefono').value.trim();
         const indirizzo = document.getElementById('indirizzo').value.trim();
         const email = document.getElementById('email').value.trim();
+
+        //controllo validità dei valori inseriti
 
         if (!nomeRist || !indirizzo || !email || !piva) {
             showToast("Compila tutti i campi obbligatori", "warning");
@@ -42,6 +49,7 @@ if (form) {
         }
 
         try {
+            //effettuo una PUT al server con i dati aggiornati per salvarli nel database
             const risposta = await fetch(API_URL + '/ristoratore/' + userId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -53,7 +61,7 @@ if (form) {
                     piva: piva
                 })
             });
-
+            //se va a buon fine notitica positiva, altrimenti di colore rosso
             if (risposta.ok) {
                 showToast("Profilo aggiornato!", "success");
             } else {
@@ -67,20 +75,23 @@ if (form) {
     });
 }
 
+//gestione eliminazione dell'account
 const btnElimina = document.getElementById('btnElimina');
 if (btnElimina) {
     btnElimina.addEventListener('click', async function() {
+        //apre finestra per richiesta du conferma
         if (!confirm("Sei sicuro di voler eliminare l'account? Questa azione è irreversibile!")) {
             return;
         }
 
         try {
+            //se arriva qui si può eliminare l'account tramite apposita API di DELETE
             const risposta = await fetch(API_URL + '/ristoratore/' + userId, { method: 'DELETE' });
 
             if (risposta.ok) {
                 alert("Account eliminato.");
-                localStorage.clear();
-                window.location.href = 'login.html';
+                localStorage.clear(); //pulizia local storage 
+                window.location.href = 'login.html'; //passo alla pagina di login
             } else {
                 showToast("Impossibile eliminare l'account", "danger");
             }

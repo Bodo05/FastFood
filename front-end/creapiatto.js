@@ -1,28 +1,38 @@
+//controlla che il ristoratore sia loggato
 if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const rId = localStorage.getItem('_id');
+
+//nel caso in cui ci sia modifica del piatto queste 2 righe seguenti servono a prendere l'ultima parte di indirizzo
+//in cui è presente l'id del piatto per poi caricare le informazioni da modificare di quel piatti
 
 const urlParams = new URLSearchParams(window.location.search);
 const piattoId = urlParams.get('piattoId');
 
+//aspetta che la pagina sia caricata e poi chiama la funzione caricaPiatto se rispettata la condizione
 document.addEventListener('DOMContentLoaded', function() {
     if (piattoId) {
+        //caso in cui si modifica perchè ha riscontrato un id
         document.getElementById('formTitle').innerText = "Modifica Piatto";
         document.getElementById('btnSubmit').innerText = "Salva Modifiche";
         caricaPiatto(piattoId);
     }
 
+    //chiama le seguenti funzioni
     document.getElementById('formPiatto').addEventListener('submit', function(e) {
-        e.preventDefault();
-        salvaPiatto();
+        e.preventDefault(); //blocca il pulsante salva
+        salvaPiatto(); //chiama funzione salvaPiatto
     });
 });
 
+//chiamata nel caso di modifica del piatto
 async function caricaPiatto(id) {
     try {
+        //prendo i piatti del ristoratore e confronto l'elenco dei piatti con l'id del piatto in questione
         const risposta = await fetch(API_URL + '/ristoratore/' + rId + '/piatti');
         const piatti = await risposta.json();
         const piatto = piatti.find(function(p) { return p._id === id; });
 
+        //riempio i campi 
         if (piatto) {
             document.getElementById('nome').value = piatto.nome || piatto.strMeal || '';
             document.getElementById('prezzo').value = piatto.prezzo || '';
@@ -30,6 +40,7 @@ async function caricaPiatto(id) {
             document.getElementById('thumb').value = piatto.thumb || piatto.strMealThumb || '';
             document.getElementById('descrizione').value = piatto.ingredienti || '';
         } else {
+            //altrimenti mostro notifica di piatto non trovato
             showToast("Piatto non trovato", "danger");
         }
     } catch (errore) {
@@ -38,6 +49,7 @@ async function caricaPiatto(id) {
     }
 }
 
+
 async function salvaPiatto() {
     const nome = document.getElementById('nome').value.trim();
     const prezzo = parseFloat(document.getElementById('prezzo').value);
@@ -45,6 +57,7 @@ async function salvaPiatto() {
     const thumb = document.getElementById('thumb').value.trim();
     const descrizione = document.getElementById('descrizione').value.trim();
 
+    //prendo i valori e se qualcosa non è presente mando notifica e non lascio proseguire
     if (!nome) {
         showToast("Inserisci il nome del piatto", "warning");
         return;
@@ -58,6 +71,7 @@ async function salvaPiatto() {
         return;
     }
 
+    //creo oggetto
     const dati = {
         piatto: {
             nome: nome,
@@ -71,14 +85,18 @@ async function salvaPiatto() {
         }
     };
 
+    //url base in POST perchè stiamo creando il piatto
     let url = API_URL + '/ristoratore/' + rId + '/piatti';
     let metodo = 'POST';
 
+    //se siamo in modifica modifico url API cambiando il metodo in PUT perche si tratta di aggiornamento
     if (piattoId) {
         url = API_URL + '/ristoratore/' + rId + '/piatti/' + piattoId;
         metodo = 'PUT';
     }
 
+
+    //chiamo il backend che va a salvare i dati nel database
     try {
         const risposta = await fetch(url, {
             method: metodo,
@@ -86,6 +104,7 @@ async function salvaPiatto() {
             body: JSON.stringify(dati)
         });
 
+        //se va a buon fine riporta alla home del ristoratore dopo 1,5 secondi, mostrando prima la notifica
         if (risposta.ok) {
             showToast(piattoId ? "Piatto aggiornato!" : "Piatto creato!", "success");
             setTimeout(function() {

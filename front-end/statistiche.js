@@ -1,3 +1,4 @@
+//controllo che ristoratore sia loggato
 if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const rId = localStorage.getItem('_id');
 
@@ -5,9 +6,11 @@ caricaStatistiche();
 
 async function caricaStatistiche() {
     try {
+        //prendo dal database le statistiche di un ristoratore
         const risposta = await fetch(API_URL + '/ristoratore/' + rId + '/statistiche');
         const dati = await risposta.json();
 
+        //riempio il testo delle card con i dati appena presi
         document.getElementById('totaleGuadagni').innerText = dati.totaleGuadagni.toFixed(2);
         document.getElementById('numeroOrdini').innerText = dati.numeroOrdini;
 
@@ -19,6 +22,7 @@ async function caricaStatistiche() {
             return;
         }
 
+        //se un piatto primo in classifica medaglia oro e cosi via, poi c'è jn badge blu che contiene il numero di ordini di quel piatto
         dati.classificaPiatti.forEach(function(piatto, i) {
             let medaglia = '';
             if (i === 0) medaglia = '🥇';

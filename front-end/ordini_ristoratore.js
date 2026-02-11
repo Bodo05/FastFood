@@ -1,9 +1,11 @@
+//controlla che ristoratore sia loggato
 if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const rId = localStorage.getItem('_id');
 
+//aspetta che la pagina sia caricata e poi chiama la funzione caricaOrdini
 document.addEventListener('DOMContentLoaded', caricaOrdini);
 
-// polling ogni 3 secondi degli ordini (interroga api /ordini)
+// polling ogni 3 secondi degli ordini (interroga api /ordini) chiamando carica ordini automaticamente
 setInterval(function() {
     const orologio = document.getElementById('orologio');
     if (orologio) {
@@ -14,22 +16,24 @@ setInterval(function() {
 
 async function caricaOrdini() {
     try {
+        //prendo dal database la lista degli ordini del ristoratore
         const risposta = await fetch(API_URL + '/ristoratore/' + rId + '/ordini');
         const ordini = await risposta.json();
         const container = document.getElementById('containerOrdini');
-
+        //se non ci sono ordini riempio il container dicendo che non ci sono stati ordini fin'ora
         if (ordini.length === 0) {
             container.innerHTML = '<div class="col-12 text-center py-5 text-muted">Nessun ordine in coda.</div>';
             return;
         }
 
-        let html = '';
-
+        let html = ''; //variabile per creazione cad
+        //per ogni ordine calcolo i vari costi
         ordini.forEach(function(ordine) {
             const totale = parseFloat(ordine.totale || 0);
             const consegna = parseFloat(ordine.costoConsegna || 0);
             const cibo = totale - consegna;
 
+            //determino la percentuale doi preparazione dell'ordine che mi servirà dopo per la barra di completamento ordine
             let percentuale = 0;
             if (ordine.stato === 'consegnato') {
                 percentuale = 100;
@@ -40,23 +44,22 @@ async function caricaOrdini() {
                 percentuale = Math.min(100, Math.max(0, (now - inizio) / (fine - inizio) * 100));
             }
 
-            const icona = ordine.tipoConsegna === 'domicilio' ? '🚚' : '🥡';
             const tipoTesto = ordine.tipoConsegna === 'domicilio' ? 'Domicilio' : 'Asporto';
-
+            //determino la lista dei piatti
             const listaPiatti = ordine.piatti.map(function(p) {
                 return '<li>' + (p.nome || p.strMeal) + ' x' + (p.quantita || 1) + '</li>';
             }).join('');
-
+            //costrusco la card in base ai parametri
             html += `
             <div class="col-md-4">
                 <div class="card h-100 shadow-sm">
                     <div class="card-header d-flex justify-content-between">
-                        <span class="fw-bold">#${ordine._id.slice(-4).toUpperCase()}</span>
+                        <span class="fw-bold">#${ordine._id.toUpperCase()}</span>
                         <span class="badge st-${ordine.stato}">${ordine.stato.replace('_', ' ')}</span>
                     </div>
                     <div class="card-body">
                         <h5>${ordine.clienteInfo.nome}</h5>
-                        <p class="text-primary">${icona} ${tipoTesto}</p>
+                        <p class="text-primary">${tipoTesto}</p>
                         
                         <div class="bg-light p-2 rounded mb-3">
                             <div class="d-flex justify-content-between">
@@ -80,6 +83,7 @@ async function caricaOrdini() {
             `;
         });
 
+        //applica l'html al mio container
         container.innerHTML = html;
 
     } catch (errore) {

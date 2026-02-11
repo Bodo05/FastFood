@@ -1,55 +1,49 @@
-// Verifica login ristoratore
+//verifica che il ristoratore sia loggato
 if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 var ristoratoreId = localStorage.getItem('_id');
 
-// Lista dei piatti già nel menu (per evitare duplicati)
+//creo array vuoto che conterrà i piatti già nel menu
 var piattiNelMenu = [];
 
-// Quando la pagina è pronta
+//aspetto che la pagina sia caricata
 document.addEventListener('DOMContentLoaded', function() {
-    // Carica i piatti già presenti nel menu
-    caricaPiattiMenu();
-    
-    // Carica tutto il catalogo all'inizio
-    caricaCatalogo();
+    //chiamo le seguenti funzioni
+    caricaPiattiMenu(); //prendo i piatti che ristoratore ha già
+    caricaCatalogo(); //prendo i piatti disponibili dal database
 
-    // Gestione ricerca
+    //se clicco il bottone chiama la funzione cerca catalogo
     document.getElementById('btnCerca').addEventListener('click', cercaCatalogo);
-    document.getElementById('inputRicerca').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            cercaCatalogo();
-        }
-    });
+    
 });
 
-/**
- * Carica i piatti già nel menu del ristoratore
- */
+
 async function caricaPiattiMenu() {
     try {
+        //prendo tramite API i piatti del ristoratore
         var risposta = await fetch(API_URL + '/ristoratore/' + ristoratoreId + '/piatti');
         var piatti = await risposta.json();
         
-        // Salva i nomi dei piatti per confronto
+        //salvo i nomi dei piatti nell'array creato precedentemente
         piattiNelMenu = piatti.map(function(p) {
             return (p.nome || p.strMeal || '').toLowerCase();
         });
+
     } catch (errore) {
         console.error('Errore caricamento menu:', errore);
     }
 }
 
-/**
- * Carica tutti i piatti dal catalogo
- */
+
 async function caricaCatalogo() {
     var container = document.getElementById('catalogoContainer');
     container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
 
     try {
+        //prendo dal databse tutti i piatti disponibili
         var risposta = await fetch(API_URL + '/catalog');
         var piatti = await risposta.json();
 
+        //chiamo la funzione mostra piatti
         mostraPiatti(piatti);
     } catch (errore) {
         console.error('Errore caricamento catalogo:', errore);
@@ -64,7 +58,7 @@ async function cercaCatalogo() {
     container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
 
     try {
-        // 1. Scarichiamo tutto il catalogo
+        //prendo tutto il catalogo
         var risposta = await fetch(API_URL + '/catalog');
         
         if (!risposta.ok) {
@@ -73,28 +67,22 @@ async function cercaCatalogo() {
 
         var tuttiPiatti = await risposta.json();
 
-        // Verifica sicurezza: assicuriamoci che sia un array
-        if (!Array.isArray(tuttiPiatti)) {
-            // Alcune API restituiscono { meals: [...] }
-            tuttiPiatti = tuttiPiatti.meals || []; 
-        }
-
-        // 2. Se non c'è termine di ricerca, mostriamo tutto
+        //se la ricerca è nulla mostro tutto
         if (!termine) {
             mostraPiatti(tuttiPiatti);
             return;
         }
 
-        // 3. Filtriamo l'array localmente
+        //filtro l'array dei piatti
         var piattiFiltrati = tuttiPiatti.filter(function(p) {
-            // Normalizziamo i nomi per evitare errori (es. null o undefined)
             var nome = (p.nome || p.strMeal || '').toLowerCase();
             var categoria = (p.categoria || p.strCategory || '').toLowerCase();
             
-            // Cerca se il termine è incluso nel nome O nella categoria
+            //cerco se il termine è nel nome o nella categoria
             return nome.includes(termine) || categoria.includes(termine);
         });
 
+        //chiamo mostra piatti passando i piatti che rispettano la mia ricerca
         mostraPiatti(piattiFiltrati);
 
     } catch (errore) {
@@ -102,25 +90,27 @@ async function cercaCatalogo() {
         container.innerHTML = '<div class="alert alert-danger">Errore durante la ricerca: ' + errore.message + '</div>';
     }
 }
-/**
- * Mostra i piatti nel container
- */
+
 function mostraPiatti(piatti) {
     var container = document.getElementById('catalogoContainer');
     container.innerHTML = '';
 
+    //se piatti trovati 0, allora nessun piatto nel catalogo
     if (!piatti || piatti.length === 0) {
         container.innerHTML = '<p class="text-muted text-center">Nessun piatto trovato nel catalogo.</p>';
         return;
     }
 
+    //altrimenti per ogni piatto
     piatti.forEach(function(piatto) {
+        //salvo informazioni
         var nome = piatto.nome || piatto.strMeal || 'Senza nome';
         var categoria = piatto.categoria || piatto.strCategory || '';
         var immagine = piatto.thumb || piatto.strMealThumb || 'https://via.placeholder.com/150';
         var idPiatto = piatto._id || piatto.idMeal;
 
         var nomeNormalizzato = nome.toLowerCase();
+        //verifico se è già nel menu
         var giaPresente = piattiNelMenu.includes(nomeNormalizzato);
 
         var card = document.createElement('div');
@@ -132,6 +122,7 @@ function mostraPiatti(piatti) {
                     '<h6 class="card-title">' + nome + '</h6>' +
                     '<small class="text-muted">' + categoria + '</small>' +
                     (giaPresente 
+                        <!-- se non è giaPresente, condizione dopo :, aggiungo la possibilità di inserire prezzo -->
                         ? ''
                         : '<div class="input-group input-group-sm mt-2">' +
                             '<span class="input-group-text">€</span>' +
@@ -141,6 +132,7 @@ function mostraPiatti(piatti) {
                 '</div>' +
                 '<div class="card-footer bg-white">' +
                     (giaPresente 
+                        <!-- se è già presente pulsante grigio disabilitato, altrimenti verde e se schiacciato chiama aggiungiPiatto e i suoi parametri -->
                         ? '<button class="btn btn-sm btn-secondary w-100" disabled>Già nel menu</button>'
                         : '<button class="btn btn-sm btn-success w-100" onclick="aggiungiPiatto(\'' + 
                             idPiatto + '\', \'' + 
@@ -153,23 +145,22 @@ function mostraPiatti(piatti) {
         container.appendChild(card);
     });
 }
-
-/**
- * Aggiunge un piatto dal catalogo al menu del ristoratore
- */
+ 
+//funzione che permette di aggiungere al database il piatto
 async function aggiungiPiatto(idPiatto, nome, categoria, immagine) {
-    // Leggi il prezzo dal campo input
+    //prendo il prezzo di input
     var inputPrezzo = document.getElementById('prezzo-' + idPiatto);
     var prezzo = inputPrezzo ? inputPrezzo.value : '';
     
     var prezzoNumero = parseFloat(prezzo);
+    //controllo validità del valore inserito
     if (isNaN(prezzoNumero) || prezzoNumero <= 0) {
         showToast('Inserisci un prezzo valido per "' + nome + '"', 'warning');
         if (inputPrezzo) inputPrezzo.focus();
         return;
     }
 
-    // Prepara i dati del piatto
+    //preparo oggetto che poi andrà al database
     var datiPiatto = {
         piatto: {
             nome: nome,
@@ -179,11 +170,12 @@ async function aggiungiPiatto(idPiatto, nome, categoria, immagine) {
             strMeal: nome,
             strCategory: categoria,
             strMealThumb: immagine,
-            idCatalog: idPiatto // ID originale dal catalogo
+            idCatalog: idPiatto 
         }
     };
 
     try {
+        //eseguo chiamata in post verso la seguente rotta per salvare i dati nel database
         var risposta = await fetch(API_URL + '/ristoratore/' + ristoratoreId + '/piatti', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -193,7 +185,7 @@ async function aggiungiPiatto(idPiatto, nome, categoria, immagine) {
         if (risposta.ok) {
             showToast('Piatto "' + nome + '" aggiunto al menu!', 'success');
             
-            // Aggiorna la lista locale
+            //aggiorno l'array iniziale aggiungendo il piatto appena inserito nel menu
             piattiNelMenu.push(nome.toLowerCase());
             
             // Ricarica il catalogo per aggiornare i pulsanti

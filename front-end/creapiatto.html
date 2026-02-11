@@ -8,29 +8,31 @@
     <link href="common.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+    <!-- navbar comune a tutte le pagine -->
     <div id="navbar-placeholder"></div>
+    <!-- toast box comune a tutte le pagine -->
     <div class="toast-box" id="toastPlaceHolder"></div>
 
     <main class="container mt-4">
         <div class="row justify-content-center">
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <div class="card shadow">
                     <div class="card-body p-4">
-                        <h3 id="formTitle" class="mb-4">Aggiungi Nuovo Piatto</h3>
+                        <h3 id="formTitle" class="mb-4 text-center">Aggiungi Nuovo Piatto</h3>
 
                         <form id="formPiatto">
                             <div class="mb-3">
-                                <label class="form-label">Nome Piatto *</label>
+                                <label class="form-label">Nome Piatto</label>
                                 <input type="text" id="nome" class="form-control" required>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Prezzo (€) *</label>
+                                <label class="form-label">Prezzo (€)</label>
                                 <input type="number" step="0.01" id="prezzo" class="form-control" required>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Categoria *</label>
+                                <label class="form-label">Categoria</label>
                                 <input type="text" id="categoria" class="form-control" placeholder="es. Pizza, Burger, Pasta...">
                             </div>
 
@@ -45,6 +47,7 @@
                             </div>
 
                             <div class="d-grid gap-2">
+                                <!-- il submit viene controllato direttamente dal js -->
                                 <button type="submit" id="btnSubmit" class="btn btn-primary">Aggiungi Piatto</button>
                                 <a href="ristoratore.html" class="btn btn-outline-secondary">Annulla</a>
                             </div>

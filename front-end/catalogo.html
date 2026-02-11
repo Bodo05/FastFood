@@ -8,17 +8,18 @@
     <link href="common.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+    <!-- navbar comune a tutte le pagine -->
     <div id="navbar-placeholder"></div>
+    <!-- toast box comune a tutte le pagine -->
     <div class="toast-box" id="toastPlaceHolder"></div>
 
     <main class="container mt-4">
-        <!-- Intestazione -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Catalogo Piatti</h2>
             <a href="ristoratore.html" class="btn btn-outline-secondary">← Torna al Menu</a>
         </div>
 
-        <!-- Barra di ricerca -->
+        <!-- barra di ricerca -->
         <div class="row mb-4">
             <div class="col-md-8">
                 <input type="text" id="inputRicerca" class="form-control" placeholder="Cerca un piatto nel catalogo...">
@@ -28,7 +29,7 @@
             </div>
         </div>
 
-        <!-- Risultati -->
+        <!-- mostra risultati -->
         <div id="catalogoContainer" class="row g-3">
             <p class="text-muted text-center">Cerca un piatto per visualizzare i risultati dal catalogo.</p>
         </div>

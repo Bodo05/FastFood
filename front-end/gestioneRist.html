@@ -8,30 +8,34 @@
     <link href="common.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+    <!-- navbar comune a tutti i file -->
     <div id="navbar-placeholder"></div>
+    <!-- toast box comune a tutti i file -->
     <div class="toast-box" id="toastPlaceHolder"></div>
 
+    <!-- profilo che occupa tutta la colonna-->
     <main class="container mt-4">
         <div class="row justify-content-center">
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">Gestione Profilo</h5>
                     </div>
                     <div class="card-body">
+                        <!-- campi da riempire -->
                         <form id="formProfilo">
                             <div class="mb-3">
-                                <label class="form-label">Nome Ristorante *</label>
+                                <label class="form-label">Nome Ristorante</label>
                                 <input type="text" class="form-control" id="nomeRistorante" required>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Email *</label>
+                                <label class="form-label">Email</label>
                                 <input type="email" class="form-control" id="email" required>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Indirizzo *</label>
+                                <label class="form-label">Indirizzo</label>
                                 <input type="text" class="form-control" id="indirizzo" required>
                             </div>
 
@@ -41,14 +45,15 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Partita IVA (11 cifre) *</label>
+                                <label class="form-label">Partita IVA (11 cifre)</label>
                                 <input type="text" class="form-control" id="piva" required>
                             </div>
-
+                            <!-- gestione submit del bottone direttamente nel js -->
                             <button type="submit" class="btn btn-success w-100 mb-2">Salva Modifiche</button>
                         </form>
 
                         <hr>
+                        <!-- gestione click del bottone gestito nel js -->
                         <button class="btn btn-outline-danger w-100" id="btnElimina">
                             Elimina Account
                         </button>
