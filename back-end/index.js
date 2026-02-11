@@ -566,7 +566,7 @@ app.post("/ordine", async (req, res) => {
                 const dist = calcolaDistanza(infoRist.lat, infoRist.lon, coordsC.lat, coordsC.lon);
                 const distReale = dist * 1.4;
                 tempoViaggio = Math.ceil(distReale * 2) + 5;
-                costoConsegna = Math.max(2, Math.round(distReale * 1));
+                costoConsegna = 2.00 + (distReale * 0.50);
             } else {
                 tempoViaggio = 15;
                 costoConsegna = 5;
@@ -766,5 +766,35 @@ app.post('/utils/geocode', async (req, res) => {
         res.json(c);
     } else {
         res.status(404).json({ message: "Errore" });
+    }
+});
+
+app.post('/preventivo', async (req, res) => {
+    // #swagger.description = "calcolo costo del preventivo"
+    const { indirizzo, ristoranteId } = req.body;
+
+    try {
+        const ristorante = await db.collection('ristoratori').findOne({ _id: toObjectId(ristoranteId) });
+        
+        const coordsCliente = await getCoordinates(indirizzo);
+        const coordsRist = await getCoordinates(ristorante.indirizzo);
+
+        if (!coordsCliente || !coordsRist) {
+            return res.status(400).json({ message: "Indirizzo non trovato" });
+        }
+
+        const km = calcolaDistanza(
+            coordsCliente.lat, 
+            coordsCliente.lon, 
+            coordsRist.lat, 
+            coordsRist.lon
+        );
+        
+        const costo = 2.00 + (km * 0.50);
+
+        res.json({ costo: parseFloat(costo.toFixed(2)) });
+
+    } catch (error) {
+        res.status(500).json({ message: "Errore server" });
     }
 });

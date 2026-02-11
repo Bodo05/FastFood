@@ -8,9 +8,13 @@
     <link href="common.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+    <!-- navbar comune a tutte le pagine -->
     <div id="navbar-placeholder"></div>
+    <!-- tpast box comune a tutte le pagine -->
     <div class="toast-box" id="toastPlaceHolder"></div>
 
+    <!-- container generale che contiene i piatti con le varie quantità e i bottoni
+     per gestire il proprio ordine -->
     <main class="container mt-4 mb-5">
         <h3 class="mb-4">Il Tuo Carrello</h3>
         
@@ -26,21 +30,24 @@
             </div>
         </div>
 
+        <!-- se chiamata la funzione mostra checkout premendo il bottone sopra indicato
+         questa sezione diventa visibile -->
         <div id="checkoutSection" class="row" style="display: none;">
-            <div class="col-md-8 mx-auto">
+            <div class="col-md-12">
                 <div class="card shadow border-0">
                     <div class="card-body p-4">
                         <h4 class="mb-4 text-center">Conferma Ordine</h4>
                         
+                        <!-- se schiaccio bottone di tipo submit chiamo funzione inviaordine -->
                         <form id="formCheckout" onsubmit="inviaOrdine(event)">
                             
                             <div class="mb-4 text-center">
-                                <div class="btn-group w-100" role="group">
+                                <div class="btn-group w -100" role="group">
                                     <input type="radio" class="btn-check" name="tipoConsegna" id="domicilio" value="domicilio" checked onchange="toggleIndirizzo()">
-                                    <label class="btn btn-outline-primary" for="domicilio">🛵 A Domicilio</label>
+                                    <label class="btn btn-outline-primary" for="domicilio">A Domicilio</label>
                                     
                                     <input type="radio" class="btn-check" name="tipoConsegna" id="asporto" value="asporto" onchange="toggleIndirizzo()">
-                                    <label class="btn btn-outline-primary" for="asporto">🛍️ Asporto (Ritiro)</label>
+                                    <label class="btn btn-outline-primary" for="asporto">Asporto</label>
                                 </div>
                             </div>
 
@@ -49,14 +56,12 @@
                                 <label for="indirizzo">Indirizzo di Consegna</label>
                             </div>
 
-                            <hr class="my-4">
-
                             <h5 class="mb-3">Metodo di Pagamento</h5>
                             
                             <div class="form-floating mb-3">
                                 <select class="form-select" id="selectMetodoPagamento">
-                                    <option value="carta_credito">💳 Carta di Credito</option>
-                                    <option value="prepagata">💳 Carta Prepagata</option>
+                                    <option value="carta_credito">Carta di Credito</option>
+                                    <option value="prepagata">Carta Prepagata</option>
                                 </select>
                                 <label for="selectMetodoPagamento">Tipo Carta</label>
                             </div>

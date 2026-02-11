@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function aggiornaPlaceholder() {
+    //ogni volta che cambio selezione viene chiamata questa funzione che salva
+    //tipologia di ricerca e il testo della ricerca
     const tipo = document.getElementById('tipoRicerca').value;
     const input = document.getElementById('inputRicerca');
     
@@ -16,7 +18,7 @@ function aggiornaPlaceholder() {
         allergene: "Es. Glutine, Lattosio...",
         piatto_ristorante: "Es. Carbonara..."
     };
-    
+    //cambio la scritta di esempio quando cambio tipolgia ricerca
     input.placeholder = placeholders[tipo] || "Scrivi qui...";
 }
 
@@ -38,11 +40,11 @@ function controllaParametriUrl() {
 }
 
 async function eseguiRicerca() {
+    //controllo che sia loggato e salvo i parametri di ricerca
     if (checkLogin('cliente') === false) return;
     const tipo = document.getElementById('tipoRicerca').value;
     const query = document.getElementById('inputRicerca').value.trim();
     const container = document.getElementById('containerRisultati');
-    const loading = document.getElementById('loading');
 
     if (!query) {
         showToast("Inserisci qualcosa da cercare!", "warning");
@@ -50,21 +52,17 @@ async function eseguiRicerca() {
     }
 
     container.innerHTML = '';
-    loading.classList.remove('d-none');
-
-    // Encoding URI component
-    const qEnc = encodeURIComponent(query);
     let endpoint = '';
     
     switch (tipo) {
-        case 'generale': endpoint = `/ricerca/generale?q=${qEnc}`; break;
-        case 'ingrediente': endpoint = `/ricerca/ingrediente?q=${qEnc}`; break;
-        case 'ristorante': endpoint = `/ricerca/ristorante?q=${qEnc}`; break;
-        case 'luogo': endpoint = `/ricerca/luogo?q=${qEnc}`; break;
-        case 'allergene': endpoint = `/ricerca/allergene?q=${qEnc}`; break;
-        case 'piatto_ristorante': endpoint = `/ricerca/piatto-ristorante?q=${qEnc}`; break;
+        case 'generale': endpoint = `/ricerca/generale?q=${query}`; break;
+        case 'ingrediente': endpoint = `/ricerca/ingrediente?q=${query}`; break;
+        case 'ristorante': endpoint = `/ricerca/ristorante?q=${query}`; break;
+        case 'luogo': endpoint = `/ricerca/luogo?q=${query}`; break;
+        case 'allergene': endpoint = `/ricerca/allergene?q=${query}`; break;
+        case 'piatto_ristorante': endpoint = `/ricerca/piatto-ristorante?q=${query}`; break;
     }
-    //costruisco query in base al tipo di ricerca
+    //costruisco endpoint in base al tipo di ricerca
 
     try {
         //chiamo api e salvo in risposta
@@ -78,8 +76,6 @@ async function eseguiRicerca() {
     } catch (errore) {
         console.error(errore);
         container.innerHTML = '<div class="alert alert-danger">Errore di connessione.</div>';
-    } finally {
-        loading.classList.add('d-none');
     }
 }
 

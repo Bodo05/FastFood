@@ -1,5 +1,8 @@
+//controllo come in ogni js che tipologiautente sia loggata
 if (checkLogin('cliente') === false) throw new Error("Redirecting...");
 const userId = localStorage.getItem('_id');
+
+//quando la pagina è caricata chiama la funzione caricaDati
 document.addEventListener('DOMContentLoaded', caricaDati);
 
 async function caricaDati() {
@@ -7,15 +10,17 @@ async function caricaDati() {
         const resCat = await fetch(API_URL + '/categorie-catalogo');
         const categorie = await resCat.json();
         const select = document.getElementById('categoriaPreferita');
-        
+        //riempie menu categoriaPreferita con le varue categorie possibili recuperate tramite API sopra
         select.innerHTML = '<option value="">-- Seleziona --</option>';
         categorie.forEach(function(cat) {
             select.innerHTML += '<option value="' + cat + '">' + cat + '</option>';
         });
 
+        //recupero i dati del cliente
         const resUser = await fetch(API_URL + '/cliente/' + userId);
         const utente = await resUser.json();
         
+        //riempio i campi utente
         document.getElementById('nome').value = utente.nome || '';
         document.getElementById('cognome').value = utente.cognome || '';
         document.getElementById('email').value = utente.email || '';
@@ -37,6 +42,7 @@ async function caricaDati() {
             select.value = utente.preferenze[0];
         }
 
+        //prendo gli ordini del clienye dal DataBase
         const resOrdini = await fetch(API_URL + '/cliente/' + userId + '/ordini');
         const ordini = await resOrdini.json();
         mostraOrdini(ordini);
@@ -56,6 +62,7 @@ function mostraOrdini(ordini) {
         return;
     }
 
+    //per ogni ordine sceglie colore etichetta in base allo stato dell'ordine
     ordini.forEach(function(ordine) {
         const totale = parseFloat(ordine.totale || 0);
         const consegna = parseFloat(ordine.costoConsegna || 0);
@@ -67,10 +74,13 @@ function mostraOrdini(ordini) {
         if (ordine.stato === 'in_preparazione') badgeClass = 'bg-primary';
         if (ordine.stato === 'consegnato') badgeClass = 'bg-success';
 
+        //uscisce i nomi dei piatti in una singola stringa separata da virgolr
         const piatti = ordine.piatti.map(function(p) {
             return p.nome || p.strMeal;
         }).join(', ');
 
+
+        //riempie il campo con id storico degli ordini
         container.innerHTML += `
             <div class="list-group-item">
                 <div class="d-flex justify-content-between">
@@ -101,6 +111,7 @@ async function aggiorna() {
         return;
     }
 
+    //prova a chiamare in put la rotta cliente/:id per  aggiornare il profilo
     try {
         const risposta = await fetch(API_URL + '/cliente/' + userId, {
             method: 'PUT',
@@ -133,6 +144,8 @@ async function elimina() {
         return;
     }
 
+    //chiama API di delete cliente/:id per eliminare il profilo dal database, se elimina riporta 
+    //alla pagina di login
     try {
         const risposta = await fetch(API_URL + '/cliente/' + userId, { method: 'DELETE' });
         

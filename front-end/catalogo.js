@@ -57,43 +57,51 @@ async function caricaCatalogo() {
     }
 }
 
-/**
- * Cerca piatti nel catalogo per nome
- */
 async function cercaCatalogo() {
-    var termine = document.getElementById('inputRicerca').value.trim();
+    var termine = document.getElementById('inputRicerca').value.trim().toLowerCase();
     var container = document.getElementById('catalogoContainer');
-
-    // Se il campo è vuoto, mostra tutto il catalogo
-    if (!termine) {
-        caricaCatalogo();
-        return;
-    }
 
     container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
 
     try {
-        // Cerca nel catalogo (se l'API supporta la ricerca)
-        var risposta = await fetch(API_URL + '/catalog?search=' + encodeURIComponent(termine));
-        var piatti = await risposta.json();
-
-        // Se l'API non supporta la ricerca, filtra lato client
-        if (!piatti.length) {
-            risposta = await fetch(API_URL + '/catalog');
-            var tuttiPiatti = await risposta.json();
-            piatti = tuttiPiatti.filter(function(p) {
-                var nome = (p.nome || p.strMeal || '').toLowerCase();
-                return nome.includes(termine.toLowerCase());
-            });
+        // 1. Scarichiamo tutto il catalogo
+        var risposta = await fetch(API_URL + '/catalog');
+        
+        if (!risposta.ok) {
+            throw new Error("Errore nel recupero dei dati dal server");
         }
 
-        mostraPiatti(piatti);
+        var tuttiPiatti = await risposta.json();
+
+        // Verifica sicurezza: assicuriamoci che sia un array
+        if (!Array.isArray(tuttiPiatti)) {
+            // Alcune API restituiscono { meals: [...] }
+            tuttiPiatti = tuttiPiatti.meals || []; 
+        }
+
+        // 2. Se non c'è termine di ricerca, mostriamo tutto
+        if (!termine) {
+            mostraPiatti(tuttiPiatti);
+            return;
+        }
+
+        // 3. Filtriamo l'array localmente
+        var piattiFiltrati = tuttiPiatti.filter(function(p) {
+            // Normalizziamo i nomi per evitare errori (es. null o undefined)
+            var nome = (p.nome || p.strMeal || '').toLowerCase();
+            var categoria = (p.categoria || p.strCategory || '').toLowerCase();
+            
+            // Cerca se il termine è incluso nel nome O nella categoria
+            return nome.includes(termine) || categoria.includes(termine);
+        });
+
+        mostraPiatti(piattiFiltrati);
+
     } catch (errore) {
         console.error('Errore ricerca:', errore);
-        container.innerHTML = '<div class="alert alert-danger">Errore durante la ricerca</div>';
+        container.innerHTML = '<div class="alert alert-danger">Errore durante la ricerca: ' + errore.message + '</div>';
     }
 }
-
 /**
  * Mostra i piatti nel container
  */

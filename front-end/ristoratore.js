@@ -1,10 +1,15 @@
+//controlla che il ristoratore sia loggato
 if (checkLogin('ristoratore') === false) throw new Error("Redirecting...");
 const rId = localStorage.getItem('_id');
+
+//appena la pagina è caricata chiama la funzione caricaMenu
 document.addEventListener('DOMContentLoaded', caricaMenu);
 
 async function caricaMenu() {
     const container = document.getElementById('menuContainer');
     
+    //chiana api in get che permette di sapere quali sono i piatti associati al ristoratore
+    //e li salva in risposta
     try {
         const risposta = await fetch(API_URL + '/ristoratore/' + rId + '/piatti');
         
@@ -15,11 +20,12 @@ async function caricaMenu() {
         const piatti = await risposta.json();
         container.innerHTML = '';
 
+        //se menu vuoto
         if (piatti.length === 0) {
             container.innerHTML = '<div class="col-12 text-center"><h5>Nessun piatto nel menu.</h5><p>Clicca "Aggiungi Piatto" per iniziare.</p></div>';
             return;
         }
-
+        //altirmenti per ogni piatto viene realizzata la card e aggiunta al container
         piatti.forEach(function(p) {
             const nome = p.nome || p.strMeal || "Senza nome";
             const immagine = p.thumb || p.strMealThumb || 'https://via.placeholder.com/150';

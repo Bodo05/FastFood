@@ -4,6 +4,7 @@ if (checkLogin('cliente') === false) {
 
 const CLIENT_ID = localStorage.getItem('_id');
 let carrello = JSON.parse(localStorage.getItem("carrello")) || [];
+let costoSpedizioneAttuale = 0;
 
 window.onload = function() {
     aggiornaCarrello();
@@ -87,6 +88,8 @@ function mostraCheckout() {
     document.getElementById('checkoutSection').scrollIntoView({ behavior: 'smooth' });
 }
 
+//funzione che permette di mostrare o meno la possibilità di inserire
+//l'indirizzo di consegna in base alla selection usata
 function toggleIndirizzo() {
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const div = document.getElementById('divIndirizzo');
@@ -97,9 +100,10 @@ function toggleIndirizzo() {
     } else {
         div.style.display = 'none';
         box.style.display = 'none';
+        costoSpedizioneAttuale = 0;
+        aggiornaTotaleVisivo();
     }
 }
-
 
 async function caricaDatiSalvati() {
     try {
@@ -108,13 +112,11 @@ async function caricaDatiSalvati() {
         
         console.log("Dati scaricati:", utente);
 
-        // Imposta Metodo Pagamento
         if (utente.metodoPagamento) {
             const select = document.getElementById('selectMetodoPagamento');
             if(select) select.value = utente.metodoPagamento;
         }
 
-        // Imposta Dati Carta
         if (utente.datiCarta) {
             const num = document.getElementById('numeroCarta');
             const scad = document.getElementById('scadenzaCarta');
@@ -130,66 +132,120 @@ async function caricaDatiSalvati() {
     }
 }
 
-// 2. Calcolo visivo costi (Simulato nel frontend)
 async function calcolaPreventivo() {
     const indirizzo = document.getElementById('indirizzo').value.trim();
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
-    
-    if (tipo !== 'domicilio' || !indirizzo) return;
+    const box = document.getElementById('boxPreventivo');
 
-    let totCibo = 0;
-    carrello.forEach(p => totCibo += (p.price * p.quantita));
+    if (tipo !== 'domicilio') {
+        costoSpedizioneAttuale = 0;
+        box.style.display = 'none';
+        aggiornaTotaleVisivo();
+        return;
+    }
 
-    document.getElementById('boxPreventivo').style.display = 'block';
-    document.getElementById('prevCibo').innerText = '€' + totCibo.toFixed(2);
-    document.getElementById('prevCosto').innerText = '(Calcolato al pagamento)';
-    document.getElementById('prevTotale').innerText = 'Totale Cibo + Spedizione';
+    if (!indirizzo) return;
+
+    try {
+        const res = await fetch(API_URL + '/preventivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                indirizzo: indirizzo,
+                ristoranteId: carrello[0].ristoranteId
+            })
+        });
+
+        if (res.ok) {
+            const dati = await res.json();
+            costoSpedizioneAttuale = parseFloat(dati.costo);
+
+            box.style.display = 'block';
+            document.getElementById('prevCosto').innerText = '€' + costoSpedizioneAttuale.toFixed(2);
+            aggiornaTotaleVisivo();
+        }
+    } catch (e) {
+        console.error(e);
+    }
 }
 
-// 3. Invio Ordine
+function aggiornaTotaleVisivo() {
+    let totCibo = 0;
+    carrello.forEach(p => totCibo += (p.price * p.quantita));
+    
+    const totFinale = totCibo + costoSpedizioneAttuale;
+
+    const prevCibo = document.getElementById('prevCibo');
+    const prevTotale = document.getElementById('prevTotale');
+    const totaleEl = document.getElementById('totale');
+
+    if (prevCibo) prevCibo.innerText = '€' + totCibo.toFixed(2);
+    if (prevTotale) prevTotale.innerText = '€' + totFinale.toFixed(2);
+    if (totaleEl) totaleEl.innerText = totFinale.toFixed(2);
+}
+
 async function inviaOrdine(e) {
     if(e) e.preventDefault();
 
-    const btn = document.getElementById('btnPaga');
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const indirizzo = document.getElementById('indirizzo').value.trim();
     
-    // Leggi i valori (che l'utente potrebbe aver modificato)
     const metodo = document.getElementById('selectMetodoPagamento').value;
     const numCarta = document.getElementById('numeroCarta').value.replace(/\s/g, '');
     const scadenza = document.getElementById('scadenzaCarta').value;
     const cvv = document.getElementById('cvvCarta').value;
 
-    // Validazioni
     if (tipo === 'domicilio' && !indirizzo) {
-        showToast("Inserisci l'indirizzo di consegna", "warning");
+        showToast("Inserisci indirizzo", "warning");
         return;
     }
     
     if (!/^\d{16}$/.test(numCarta)) {
-        showToast("Numero carta non valido (servono 16 cifre)", "warning");
+        showToast("Numero carta non valido", "warning");
         return;
     }
     if (!scadenza || !cvv) {
-        showToast("Completa i dati di scadenza e CVV", "warning");
+        showToast("Dati carta incompleti", "warning");
         return;
     }
 
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Elaborazione...';
+    if (tipo === 'domicilio' && costoSpedizioneAttuale === 0) {
+        await calcolaPreventivo();
+        if (costoSpedizioneAttuale === 0) {
+            showToast("Indirizzo non valido per la consegna", "danger");
+            return;
+        }
+    }
 
     let totPiatti = 0;
     carrello.forEach(p => totPiatti += (p.price * p.quantita));
+    const totaleFinale = totPiatti + costoSpedizioneAttuale;
+
+    const messaggio = `Riepilogo Ordine:
+    
+Cibo: €${totPiatti.toFixed(2)}
+Spedizione: €${costoSpedizioneAttuale.toFixed(2)}
+---------------------
+TOTALE: €${totaleFinale.toFixed(2)}
+
+Vuoi procedere al pagamento?`;
+
+    if (!confirm(messaggio)) {
+        return; 
+    }
+
+    const btn = document.getElementById('btnPaga');
+    btn.disabled = true;
 
     try {
         const payload = {
             clienteId: CLIENT_ID,
             ristoranteId: carrello[0].ristoranteId,
             piatti: carrello,
-            totale: totPiatti,
+            totale: totaleFinale,
+            costoSpedizione: costoSpedizioneAttuale,
             tipoConsegna: tipo,
             indirizzoConsegna: tipo === 'domicilio' ? indirizzo : null,
-            // Inviamo i dati del pagamento scelti al momento
             datiPagamento: {
                 metodo: metodo,
                 numero: numCarta,
@@ -205,20 +261,18 @@ async function inviaOrdine(e) {
         });
 
         if (risposta.ok) {
-            showToast("✅ Pagamento riuscito! Ordine inviato.", "success");
+            showToast("Ordine Inviato!", "success");
             localStorage.removeItem("carrello");
-            setTimeout(() => window.location.href = 'cliente.html', 2500);
+            setTimeout(() => window.location.href = 'cliente.html', 2000);
         } else {
             const err = await risposta.json();
-            showToast("Errore: " + (err.message || "Problema col server"), "danger");
+            showToast("Errore: " + err.message, "danger");
             btn.disabled = false;
-            btn.innerText = "PAGAMENTO SICURO E ORDINA";
         }
 
     } catch (errore) {
         console.error(errore);
         showToast("Errore di connessione", "danger");
         btn.disabled = false;
-        btn.innerText = "PAGAMENTO SICURO E ORDINA";
     }
 }
