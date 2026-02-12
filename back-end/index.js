@@ -1,12 +1,15 @@
 const express = require('express'); //gestisce rotte http
 const cors = require('cors'); //abilita richieste dal frontend
-const { MongoClient, ObjectId } = require('mongodb'); //per connettersi al database
+const MongoClient = require('mongodb').MongoClient; //per connettersi al database
+const ObjectId = require('mongodb').ObjectId;
 const axios = require('axios'); //usato per APi di OpenStreetMap per consegna domicilio
-const fs = require('fs');
+const fs = require('fs'); //usato per gestione file (es. popolazione database all'inizio leggendo file meals1.json)
+
 //documentazione automatica
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger_output.json');
 
+const port = 3000;
 const app = express();
 
 // API per documentazione api
@@ -14,14 +17,10 @@ app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 app.use(cors());
 app.use(express.json());
-
-
-const port = 3000;
 const mongoURL = "mongodb+srv://admin:admin@cluster0.fczult8.mongodb.net/";
 const dbName = "fastfood";
-
-
 const client = new MongoClient(mongoURL);
+
 let db;
 
 //trasforma le stringhe id in oggetti di mongoDb
@@ -78,20 +77,26 @@ async function startServer() {
             const data = fs.readFileSync('meals1.json', 'utf8');
             const jsonData = JSON.parse(data);
             
-            let piattiDaInserire;
+            let piattiDaInserire = jsonData;
             if (Array.isArray(jsonData)) {
                 piattiDaInserire = jsonData;
             } else {
                 piattiDaInserire = jsonData.meals || [];
             }
 
-            const piattiPuliti = piattiDaInserire.map(p => {
-                const nuovoPiatto = { ...p };
+            const piattiPuliti = [];
+
+            for (let i = 0; i < piattiDaInserire.length; i++) {
+                let p = piattiDaInserire[i];
+            
+                let nuovoPiatto = { ...p }; //p originale resta integro
+
                 if (nuovoPiatto._id && nuovoPiatto._id.$oid) {
                     nuovoPiatto._id = new ObjectId(nuovoPiatto._id.$oid);
                 }
-                return nuovoPiatto;
-            });
+
+                piattiPuliti.push(nuovoPiatto);
+            }
 
             if (piattiPuliti.length > 0) {
                 await catalogCollection.insertMany(piattiPuliti);
@@ -116,6 +121,8 @@ app.post("/cliente", async (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
     const preferenze = req.body.preferenze || [];
+    const metodoPagamento = req.body.metodoPagamento;
+    const datiCarta = req.body.datiCarta;
 
     if (!email || !password) {
         return res.status(400).json({ message: "Dati mancanti" });
@@ -133,6 +140,8 @@ app.post("/cliente", async (req, res) => {
             email: email,
             password: password,
             preferenze: preferenze,
+            metodoPagamento: metodoPagamento,
+            datiCarta: datiCarta,
             createdAt: new Date()
         };
 
@@ -191,6 +200,8 @@ app.post("/ristoratore", async (req, res) => {
     const password = req.body.password;
     const indirizzo = req.body.indirizzo;
     const piattiMenu = req.body.piatti;
+    const piva = req.body.piva;
+    const telefono = req.body.telefono;
 
     if (!email || !password || !nomeRistorante) {
         return res.status(400).json({ message: "Dati mancanti" });
@@ -209,8 +220,8 @@ app.post("/ristoratore", async (req, res) => {
             email: email,
             password: password,
             indirizzo: indirizzo,
-            piva: req.body.piva,
-            telefono: req.body.telefono,
+            piva: piva,
+            telefono: telefono,
             lat: coords ? coords.lat : null,
             lon: coords ? coords.lon : null,
             piatti: [],

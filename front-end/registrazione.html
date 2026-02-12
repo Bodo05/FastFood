@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrazione - FastFood</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Registrazione</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link href="common.css" rel="stylesheet">
 </head>
 <body class="bg-auth">
@@ -56,16 +56,16 @@
                         <!-- sezione cliente di base sempre attiva, cambia con onclick sul bottore ristoratore -->
                         <div id="divCliente">
                             <div class="mb-3">
-                                <label class="form-label">Nome *</label>
+                                <label class="form-label">Nome</label>
                                 <input type="text" class="form-control" id="nome" placeholder="Mario">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Cognome *</label>
+                                <label class="form-label">Cognome</label>
                                 <input type="text" class="form-control" id="cognome" placeholder="Rossi">
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Metodo di Pagamento *</label>
+                                <label class="form-label">Metodo di Pagamento</label>
                                 <select class="form-select" id="metodoPagamento">
                                     <option value="">-- Seleziona --</option>
                                     <option value="carta_credito">Carta di Credito</option>
@@ -87,7 +87,6 @@
                                     <input type="text" class="form-control" id="regScadenza" placeholder="MM/YY" maxlength="5">
                                 </div>
                             </div>
-                        </div>
 
                          <div class="mb-3">
                             <label class="form-label">Preferenza Alimentare (Opzionale)</label>
@@ -158,7 +157,7 @@
     </main>
 
     <script src="utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script src="registrazioneClienteRistoratore.js"></script>
 </body>
 </html>

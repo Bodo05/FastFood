@@ -47,11 +47,16 @@ function cambiaTab(tipo) {
     const btnR = document.getElementById('btnTabRistoratore');
     //permette di nascondereil div di un form e mostrare l'altro 
     if (tipo === 'cliente') {
-        btnC.classList.add('active');
-        btnR.classList.remove('active');
+        divCliente.style.display = 'block';
+        divRistoratore.style.display = 'none';
+        btnC.className = 'btn btn-primary';
+        btnR.className = 'btn btn-outline-primary';
+        
     } else {
-        btnR.classList.add('active');
-        btnC.classList.remove('active');
+        divCliente.style.display = 'none';
+        divRistoratore.style.display = 'block';
+        btnR.className = 'btn btn-primary';
+        btnC.className = 'btn btn-outline-primary';
     }
 }
 
