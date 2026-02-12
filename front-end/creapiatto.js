@@ -30,7 +30,14 @@ async function caricaPiatto(id) {
         //prendo i piatti del ristoratore e confronto l'elenco dei piatti con l'id del piatto in questione
         const risposta = await fetch(API_URL + '/ristoratore/' + rId + '/piatti');
         const piatti = await risposta.json();
-        const piatto = piatti.find(function(p) { return p._id === id; });
+        let piatto = null;
+        
+        for (let i = 0; i < piatti.length; i++) {
+            if (piatti[i]._id === id) {
+                piatto = piatti[i];
+                break;
+            }
+        }
 
         //riempio i campi 
         if (piatto) {

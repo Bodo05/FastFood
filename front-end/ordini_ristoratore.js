@@ -46,9 +46,19 @@ async function caricaOrdini() {
 
             const tipoTesto = ordine.tipoConsegna === 'domicilio' ? 'Domicilio' : 'Asporto';
             //determino la lista dei piatti
-            const listaPiatti = ordine.piatti.map(function(p) {
-                return '<li>' + (p.nome || p.strMeal) + ' x' + (p.quantita || 1) + '</li>';
-            }).join('');
+            let listaPiatti = '';
+            
+            //controllo che ci siano piatti
+            if (ordine.piatti && ordine.piatti.length > 0) {
+                for (let j = 0; j < ordine.piatti.length; j++) {
+                    let p = ordine.piatti[j];
+                    let nomePiatto = p.nome || p.strMeal;
+                    let quantitaPiatto = p.quantita || 1;
+                    
+                    //aggiungo riga nella lista
+                    listaPiatti += '<li>' + nomePiatto + ' x' + quantitaPiatto + '</li>';
+                }
+            }
             //costrusco la card in base ai parametri
             html += `
             <div class="col-md-4">

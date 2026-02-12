@@ -24,9 +24,13 @@ async function caricaPiattiMenu() {
         var piatti = await risposta.json();
         
         //salvo i nomi dei piatti nell'array creato precedentemente
-        piattiNelMenu = piatti.map(function(p) {
-            return (p.nome || p.strMeal || '').toLowerCase();
-        });
+        piattiNelMenu = [];
+        for (var i = 0; i < piatti.length; i++) {
+            var p = piatti[i];
+            //prendo il nome, gestisco il caso null elo rendo minuscolo
+            var nomePiatto = (p.nome || p.strMeal || '').toLowerCase();
+            piattiNelMenu.push(nomePiatto);
+        }
 
     } catch (errore) {
         console.error('Errore caricamento menu:', errore);
@@ -74,13 +78,18 @@ async function cercaCatalogo() {
         }
 
         //filtro l'array dei piatti
-        var piattiFiltrati = tuttiPiatti.filter(function(p) {
+        var piattiFiltrati = [];
+        for (var i = 0; i < tuttiPiatti.length; i++) {
+            var p = tuttiPiatti[i];
             var nome = (p.nome || p.strMeal || '').toLowerCase();
             var categoria = (p.categoria || p.strCategory || '').toLowerCase();
-            
-            //cerco se il termine è nel nome o nella categoria
-            return nome.includes(termine) || categoria.includes(termine);
-        });
+
+            //se il nome o la categoria contengono la parola cercata...
+            if (nome.includes(termine) || categoria.includes(termine)) {
+                //aggiungo il piatto alla nuova lista
+                piattiFiltrati.push(p);
+            }
+        }
 
         //chiamo mostra piatti passando i piatti che rispettano la mia ricerca
         mostraPiatti(piattiFiltrati);
@@ -110,42 +119,57 @@ function mostraPiatti(piatti) {
         var idPiatto = piatto._id || piatto.idMeal;
 
         var nomeNormalizzato = nome.toLowerCase();
+        
         //verifico se è già nel menu
-        var giaPresente = piattiNelMenu.includes(nomeNormalizzato);
+        var giaPresente = false;
+        for (var j = 0; j < piattiNelMenu.length; j++) {
+            if (piattiNelMenu[j] === nomeNormalizzato) {
+                giaPresente = true;
+                break;
+            }
+        }
+
+        //dichiaro variabili html vuote
+        var htmlPrezzo = '';
+        var htmlBottone = '';
+
+        if (giaPresente) { //se presente no prezzo e bottone disabilitato
+            htmlPrezzo = ''; 
+            htmlBottone = '<button class="btn btn-sm btn-secondary w-100" disabled>Già nel menu</button>';
+        } else { //se non è presente aggiungo possibilità di mettere prezzo e bottone verde abilitato
+            htmlPrezzo = '<div class="input-group input-group-sm mt-2">' +
+                            '<span class="input-group-text">€</span>' +
+                            '<input type="number" class="form-control" id="prezzo-' + idPiatto + '" placeholder="Prezzo" min="0.01" step="0.01">' +
+                         '</div>';
+            
+            //sistemazione caratteri
+            var nomeOk = nome.replace(/'/g, "\\'");
+            var catOk = categoria.replace(/'/g, "\\'");
+            htmlBottone = '<button class="btn btn-sm btn-success w-100" onclick="aggiungiPiatto(\'' + idPiatto + '\', \'' + nomeOk + '\', \'' + catOk + '\', \'' + immagine + '\')">+ Aggiungi al menu</button>';
+        }
 
         var card = document.createElement('div');
         card.className = 'col-md-3 mb-3';
+        
+        // Ora l'HTML è pulito, inserisco solo le variabili preparate sopra
         card.innerHTML = 
             '<div class="card h-100 shadow-sm">' +
                 '<img src="' + immagine + '" class="card-img-top" style="height:150px; object-fit:cover">' +
                 '<div class="card-body">' +
                     '<h6 class="card-title">' + nome + '</h6>' +
                     '<small class="text-muted">' + categoria + '</small>' +
-                    (giaPresente 
-                        <!-- se non è giaPresente, condizione dopo :, aggiungo la possibilità di inserire prezzo -->
-                        ? ''
-                        : '<div class="input-group input-group-sm mt-2">' +
-                            '<span class="input-group-text">€</span>' +
-                            '<input type="number" class="form-control" id="prezzo-' + idPiatto + '" placeholder="Prezzo" min="0.01" step="0.01">' +
-                          '</div>'
-                    ) +
+                    htmlPrezzo + // Inserisco la variabile calcolata prima
                 '</div>' +
                 '<div class="card-footer bg-white">' +
-                    (giaPresente 
-                        <!-- se è già presente pulsante grigio disabilitato, altrimenti verde e se schiacciato chiama aggiungiPiatto e i suoi parametri -->
-                        ? '<button class="btn btn-sm btn-secondary w-100" disabled>Già nel menu</button>'
-                        : '<button class="btn btn-sm btn-success w-100" onclick="aggiungiPiatto(\'' + 
-                            idPiatto + '\', \'' + 
-                            nome.replace(/'/g, "\\'") + '\', \'' + 
-                            categoria.replace(/'/g, "\\'") + '\', \'' + 
-                            immagine + '\')">+ Aggiungi al menu</button>'
-                    ) +
+                    htmlBottone + // Inserisco la variabile calcolata prima
                 '</div>' +
             '</div>';
+
         container.appendChild(card);
+
     });
 }
- 
+
 //funzione che permette di aggiungere al database il piatto
 async function aggiungiPiatto(idPiatto, nome, categoria, immagine) {
     //prendo il prezzo di input
@@ -188,7 +212,7 @@ async function aggiungiPiatto(idPiatto, nome, categoria, immagine) {
             //aggiorno l'array iniziale aggiungendo il piatto appena inserito nel menu
             piattiNelMenu.push(nome.toLowerCase());
             
-            // Ricarica il catalogo per aggiornare i pulsanti
+            //ricarica il catalogo per aggiornare i pulsanti
             var termine = document.getElementById('inputRicerca').value.trim();
             if (termine) {
                 cercaCatalogo();

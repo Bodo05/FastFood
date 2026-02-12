@@ -15,7 +15,7 @@
 
     <!-- container generale che contiene i piatti con le varie quantità e i bottoni
      per gestire il proprio ordine -->
-    <main class="container mt-4 mb-5">
+    <main class="container mt-4 mb-5" id="mainContainer">
         <h3 class="mb-4">Il Tuo Carrello</h3>
         
         <div id="carrelloContainer" class="mb-4"></div>
@@ -51,9 +51,13 @@
                                 </div>
                             </div>
 
-                            <div class="form-floating mb-4" id="divIndirizzo">
-                                <input type="text" class="form-control" id="indirizzo" placeholder="Via Roma 1" onblur="calcolaPreventivo()">
-                                <label for="indirizzo">Indirizzo di Consegna</label>
+                            <div class="mb-4" id="divIndirizzo">
+                                <label class="form-label">Indirizzo di Consegna</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="indirizzo" placeholder="Via Roma 1">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="confermaIndirizzoManuale()">Inserisci</button>
+                                </div>
+                                <small id="msgIndirizzo" class="text-success fw-bold" style="display: none;">indirizzo confermato!</small>
                             </div>
 
                             <h5 class="mb-3">Metodo di Pagamento</h5>

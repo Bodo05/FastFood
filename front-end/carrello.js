@@ -1,3 +1,4 @@
+//controllo che il cliente sia loggato
 if (checkLogin('cliente') === false) {
     throw new Error("Redirecting...");
 }
@@ -5,7 +6,10 @@ if (checkLogin('cliente') === false) {
 const CLIENT_ID = localStorage.getItem('_id');
 let carrello = JSON.parse(localStorage.getItem("carrello")) || [];
 let costoSpedizioneAttuale = 0;
+//variabile per sapere se l'indirizzo è confermato col bottone
+let indirizzoConfermato = false; 
 
+//a schermata caricata chiamo seguenti funzioni
 window.onload = function() {
     aggiornaCarrello();
     toggleIndirizzo();
@@ -19,7 +23,7 @@ function aggiornaCarrello() {
     const checkoutEl = document.getElementById("checkoutSection");
 
     container.innerHTML = "";
-
+    //controllo che carrello non sia vuoto
     if (carrello.length === 0) {
         container.innerHTML = '<div class="alert alert-warning text-center">Il tuo carrello è vuoto.</div>';
         azioniEl.style.display = 'none';
@@ -29,6 +33,7 @@ function aggiornaCarrello() {
 
     let totale = 0;
     
+    //altrimenti per ogni oggetto nel localstorage (carrello) calcolo il totale e creo card dell'oggetto con bottoni per modificare quantità
     carrello.forEach(function(p) {
         const subtotale = (p.price || 0) * p.quantita;
         totale += subtotale;
@@ -63,18 +68,33 @@ function aggiornaCarrello() {
     azioniEl.style.display = 'flex';
 }
 
+//cerco il piatto tramite id
 function modificaQuantita(id, delta) {
-    const item = carrello.find(i => i.idMeal === id);
+    var item = null;
+    var indice = -1;
+
+    for (var i = 0; i < carrello.length; i++) {
+        if (carrello[i].idMeal === id) {
+            item = carrello[i];
+            indice = i; //salvo la posizione per poterlo cancellare dopo
+            break; 
+        }
+    }
     if (item) {
         item.quantita += delta;
+        //se quantità minore o uguale a 0 scarto il prodotto dalla lista carrello 
+        //la funzione filter prende la lista originale, la filtra creandone una nuova
         if (item.quantita <= 0) {
             carrello = carrello.filter(i => i.idMeal !== id);
         }
         localStorage.setItem("carrello", JSON.stringify(carrello));
         aggiornaCarrello();
+        //se modifico quantità ricalcolo anche preventivo se c'è indirizzo
+        if(indirizzoConfermato) calcolaPreventivo();
     }
 }
 
+//libera local storage carrello per fare si che non ci siano piu piatti nel carrello virtuale
 function svuotaCarrello() {
     if(confirm("Svuotare il carrello?")) {
         carrello = [];
@@ -88,30 +108,54 @@ function mostraCheckout() {
     document.getElementById('checkoutSection').scrollIntoView({ behavior: 'smooth' });
 }
 
-//funzione che permette di mostrare o meno la possibilità di inserire
-//l'indirizzo di consegna in base alla selection usata
 function toggleIndirizzo() {
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const div = document.getElementById('divIndirizzo');
     const box = document.getElementById('boxPreventivo');
+    const btnPaga = document.getElementById('btnPaga');
     
     if (tipo === 'domicilio') {
         div.style.display = 'block';
+        //se domicilio, disabilito finchè non preme inserisci
+        if (!indirizzoConfermato) {
+            btnPaga.disabled = true;
+        }
     } else {
         div.style.display = 'none';
         box.style.display = 'none';
         costoSpedizioneAttuale = 0;
         aggiornaTotaleVisivo();
+        //se asporto abilito subito
+        btnPaga.disabled = false;
     }
+}
+
+//chiamata dal bottone inserisci
+async function confermaIndirizzoManuale() {
+    const indirizzo = document.getElementById('indirizzo').value.trim();
+    const msg = document.getElementById('msgIndirizzo');
+
+    if (!indirizzo) {
+        alert("Scrivi un indirizzo valido");
+        return;
+    }
+
+    //chiamo il calcolo preventivo che chiama api
+    await calcolaPreventivo();
+
+    //se il costo è valido confermo
+    indirizzoConfermato = true;
+    msg.style.display = 'block';
+    msg.innerText = "Indirizzo confermato: " + indirizzo;
+    document.getElementById('btnPaga').disabled = false;
 }
 
 async function caricaDatiSalvati() {
     try {
+        //tramite api di get riesco a prendere i dati del cliente per riempire i campi con le sue informazioni
         const risposta = await fetch(API_URL + '/cliente/' + CLIENT_ID);
         const utente = await risposta.json();
         
-        console.log("Dati scaricati:", utente);
-
         if (utente.metodoPagamento) {
             const select = document.getElementById('selectMetodoPagamento');
             if(select) select.value = utente.metodoPagamento;
@@ -147,6 +191,7 @@ async function calcolaPreventivo() {
     if (!indirizzo) return;
 
     try {
+        //chiama api preventivo inviando indirizzo e ristorante id e server risponde con il costo
         const res = await fetch(API_URL + '/preventivo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -155,6 +200,7 @@ async function calcolaPreventivo() {
                 ristoranteId: carrello[0].ristoranteId
             })
         });
+            
 
         if (res.ok) {
             const dati = await res.json();
@@ -171,17 +217,16 @@ async function calcolaPreventivo() {
 
 function aggiornaTotaleVisivo() {
     let totCibo = 0;
+
     carrello.forEach(p => totCibo += (p.price * p.quantita));
     
     const totFinale = totCibo + costoSpedizioneAttuale;
 
     const prevCibo = document.getElementById('prevCibo');
     const prevTotale = document.getElementById('prevTotale');
-    const totaleEl = document.getElementById('totale');
-
+    
     if (prevCibo) prevCibo.innerText = '€' + totCibo.toFixed(2);
     if (prevTotale) prevTotale.innerText = '€' + totFinale.toFixed(2);
-    if (totaleEl) totaleEl.innerText = totFinale.toFixed(2);
 }
 
 async function inviaOrdine(e) {
@@ -189,14 +234,16 @@ async function inviaOrdine(e) {
 
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const indirizzo = document.getElementById('indirizzo').value.trim();
+    const btn = document.getElementById('btnPaga');
     
+    //controlli validazione
     const metodo = document.getElementById('selectMetodoPagamento').value;
     const numCarta = document.getElementById('numeroCarta').value.replace(/\s/g, '');
     const scadenza = document.getElementById('scadenzaCarta').value;
     const cvv = document.getElementById('cvvCarta').value;
 
-    if (tipo === 'domicilio' && !indirizzo) {
-        showToast("Inserisci indirizzo", "warning");
+    if (tipo === 'domicilio' && !indirizzoConfermato) {
+        alert("Clicca su Inserisci per confermare l'indirizzo.");
         return;
     }
     
@@ -204,37 +251,11 @@ async function inviaOrdine(e) {
         showToast("Numero carta non valido", "warning");
         return;
     }
-    if (!scadenza || !cvv) {
-        showToast("Dati carta incompleti", "warning");
-        return;
-    }
-
-    if (tipo === 'domicilio' && costoSpedizioneAttuale === 0) {
-        await calcolaPreventivo();
-        if (costoSpedizioneAttuale === 0) {
-            showToast("Indirizzo non valido per la consegna", "danger");
-            return;
-        }
-    }
 
     let totPiatti = 0;
     carrello.forEach(p => totPiatti += (p.price * p.quantita));
     const totaleFinale = totPiatti + costoSpedizioneAttuale;
 
-    const messaggio = `Riepilogo Ordine:
-    
-Cibo: €${totPiatti.toFixed(2)}
-Spedizione: €${costoSpedizioneAttuale.toFixed(2)}
----------------------
-TOTALE: €${totaleFinale.toFixed(2)}
-
-Vuoi procedere al pagamento?`;
-
-    if (!confirm(messaggio)) {
-        return; 
-    }
-
-    const btn = document.getElementById('btnPaga');
     btn.disabled = true;
 
     try {
@@ -261,9 +282,19 @@ Vuoi procedere al pagamento?`;
         });
 
         if (risposta.ok) {
-            showToast("Ordine Inviato!", "success");
             localStorage.removeItem("carrello");
-            setTimeout(() => window.location.href = 'cliente.html', 2000);
+
+            //messaggio a schermo di avvenuta ordinazione
+            const main = document.getElementById('mainContainer');
+            main.innerHTML = `
+                <div class="text-center py-5">
+                    <h2 class="mb-4">Grazie per il tuo ordine!</h2>
+                    <p class="lead">Abbiamo ricevuto la tua richiesta di <strong>€${totaleFinale.toFixed(2)}</strong>.</p>
+                    <p class="text-muted">Il tuo cibo arriverà presto.</p>
+                    <a href="cliente.html" class="btn btn-primary mt-4">Torna alla Home</a>
+                </div>
+            `;
+            
         } else {
             const err = await risposta.json();
             showToast("Errore: " + err.message, "danger");
