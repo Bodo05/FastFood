@@ -118,6 +118,9 @@
           "200": {
             "description": "OK"
           },
+          "404": {
+            "description": "Not Found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -378,7 +381,7 @@
         }
       },
       "get": {
-        "description": "Menu ristoratore",
+        "description": "Restituisce tutti i piatti del ristoratore",
         "parameters": [
           {
             "name": "id",
@@ -601,42 +604,6 @@
         }
       }
     },
-    "/ordine/preventivo": {
-      "post": {
-        "description": "Preventivo ordine",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "piatti": {
-                  "example": "any"
-                },
-                "ristoranteId": {
-                  "example": "any"
-                },
-                "indirizzoConsegna": {
-                  "example": "any"
-                },
-                "tipoConsegna": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
     "/cliente/{id}/ordini": {
       "get": {
         "description": "Storico ordini cliente",
@@ -729,7 +696,7 @@
     },
     "/preventivo": {
       "post": {
-        "description": "calcolo costo del preventivo",
+        "description": "calcolo preventivo con stima orario (considerando la coda)",
         "parameters": [
           {
             "name": "body",
@@ -742,6 +709,12 @@
                 },
                 "ristoranteId": {
                   "example": "any"
+                },
+                "piatti": {
+                  "example": "any"
+                },
+                "tipo": {
+                  "example": "any"
                 }
               }
             }
@@ -753,6 +726,9 @@
           },
           "400": {
             "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
           },
           "500": {
             "description": "Internal Server Error"
