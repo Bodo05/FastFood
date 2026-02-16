@@ -800,7 +800,7 @@ app.post('/preventivo', async (req, res) => {
             costo = 2.00 + (distEffettiva * 0.50);
         }
 
-        const durataMs = (tempoPrep + tempoViaggio) * 60 * 1000;
+        const durataMs = (tempoPrep + tempoViaggio) * 1000;
 
         const now = new Date();
         let inizio = now;
