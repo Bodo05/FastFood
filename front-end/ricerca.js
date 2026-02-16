@@ -130,19 +130,42 @@ function creaCardPiatto(piatto, container) {
     const nome = piatto.nome || piatto.strMeal || "Senza nome";
     const ristorante = piatto.ristoranteNome || 'Sconosciuto';
     const prezzo = parseFloat(piatto.prezzo || 0).toFixed(2); 
+    
+    //RECUPERO TEMPO O DEFAULT 15
+    const tempo = parseInt(piatto.tempo) || 15;
+
+    //RECUPERO DESCRIZIONE E TAGLIO SE TROPPO LUNGA
+    let desc = piatto.ingredienti || piatto.strInstructions || "Nessuna descrizione";
+    if (desc.length > 90) {
+        desc = desc.substring(0, 90) + '...';
+    }
 
     const col = document.createElement('div');
-    col.className = 'col-md-4';
+    col.className = 'col-md-4 col-lg-3'; 
     col.innerHTML = `
         <div class="card h-100 shadow-sm border-0">
-            <img src="${immagine}" class="card-img-top" style="height: 200px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300x200?text=Err+Img'">
-            <div class="card-body d-flex flex-column">
-                <h5 class="card-title text-truncate" title="${nome}">${nome}</h5>
-                <p class="text-muted small mb-2">Da: ${ristorante}</p>
-                <div class="mt-auto d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-primary fs-5">€${prezzo}</span>
-                    <button class="btn btn-sm btn-outline-success fw-bold" onclick="aggiungiCarrello('${piatto._id}', '${nome.replace(/'/g, "\\'")}', ${piatto.prezzo || 0}, '${immagine}', '${piatto.categoria || ''}', '${piatto.ristoranteId || ''}', '${ristorante.replace(/'/g, "\\'")}')">
-                        + Carrello
+            <img src="${immagine}" class="card-img-top" style="height: 180px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300x200?text=Err+Img'">
+            <div class="card-body d-flex flex-column p-3">
+                
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title text-truncate fw-bold mb-0" title="${nome}" style="max-width: 70%;">${nome}</h5>
+                    <span class="badge bg-success">€${prezzo}</span>
+                </div>
+                
+                <p class="text-muted small mb-2"><i class="bi bi-shop"></i> ${ristorante}</p>
+                
+                <p class="card-text text-secondary small flex-grow-1 border-top pt-2 mt-1" style="font-size: 0.85rem;">
+                    <em>${desc}</em>
+                </p>
+
+                <div class="mt-auto">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted"><i class="bi bi-clock"></i> ${tempo} min</small>
+                    </div>
+
+                    <button class="btn btn-outline-primary w-100 fw-bold" 
+                        onclick="aggiungiCarrello('${piatto._id}', '${nome.replace(/'/g, "\\'")}', ${piatto.prezzo || 0}, '${immagine}', '${piatto.categoria || ''}', '${piatto.ristoranteId || ''}', '${ristorante.replace(/'/g, "\\'")}', ${tempo})">
+                        Aggiungi al Carrello
                     </button>
                 </div>
             </div>
@@ -171,17 +194,17 @@ function creaCardRistorante(ristorante, container) {
     container.appendChild(col);
 }
 
-function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, ristoranteNome) {
+function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, ristoranteNome, tempo) {
     if (!localStorage.getItem('_id')) {
-        showToast("Login richiesto!", "danger");
+        showToast("Devi fare il Login!", "danger");
         return;
     }
     
     let carrello = JSON.parse(localStorage.getItem('carrello') || '[]');
     
-    // Check Multi-Ristorante
+    //CHECK MULTI RISTORANTE
     if (carrello.length > 0 && carrello[0].ristoranteId !== ristoranteId) {
-        showToast("Puoi ordinare da un solo ristorante alla volta!", "warning");
+        showToast("Puoi ordinare da un solo ristorante alla volta! Svuota prima il carrello.", "warning");
         return; 
     }
     
@@ -198,10 +221,11 @@ function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, rist
             strCategory: categoria,
             ristoranteId: ristoranteId,
             ristoranteNome: ristoranteNome,
+            tempo: parseInt(tempo) || 15,
             quantita: 1
         });
     }
     
     localStorage.setItem('carrello', JSON.stringify(carrello));
-    showToast(nome + ' aggiunto!', 'success');
+    showToast(nome + ' aggiunto al carrello!', 'success');
 }

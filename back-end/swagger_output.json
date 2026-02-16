@@ -13,7 +13,7 @@
   "paths": {
     "/cliente": {
       "post": {
-        "description": "Registrazione utente",
+        "description": "Registrazione cliente",
         "parameters": [
           {
             "name": "body",
@@ -34,6 +34,12 @@
                   "example": "any"
                 },
                 "preferenze": {
+                  "example": "any"
+                },
+                "metodoPagamento": {
+                  "example": "any"
+                },
+                "datiCarta": {
                   "example": "any"
                 }
               }
@@ -717,6 +723,39 @@
           },
           "404": {
             "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/preventivo": {
+      "post": {
+        "description": "calcolo costo del preventivo",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "indirizzo": {
+                  "example": "any"
+                },
+                "ristoranteId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }

@@ -53,11 +53,12 @@ function mostraPiatti(piatti) {
     }
     //costruzione delle card con i piatti 
     piatti.forEach(function(p) {
-        const immagine = p.thumb || 'https://via.placeholder.com/300x200?text=No+Image';
-        const prezzo = p.prezzo ? '€' + parseFloat(p.prezzo).toFixed(2) : 'N/D';
-        const ristorante = p.ristoranteNome || 'Sconosciuto';
-
-        const card = document.createElement('div');
+        var immagine = p.thumb || 'https://via.placeholder.com/300x200?text=No+Image';
+        var prezzo = p.prezzo ? '€' + parseFloat(p.prezzo).toFixed(2) : 'N/D';
+        var ristorante = p.ristoranteNome || 'Sconosciuto';
+        var tempo = p.tempo || 15;
+        var ingredienti = p.ingredienti || '';
+        var card = document.createElement('div');
         card.className = 'col-md-4 mb-4';
         card.innerHTML = `
             <div class="card h-100 shadow-sm border-0">
@@ -65,7 +66,9 @@ function mostraPiatti(piatti) {
                 <div class="card-body">
                     <h5 class="card-title text-truncate">${p.nome}</h5>
                     <p class="text-muted small">Da: ${ristorante}</p>
+                    ${ingredienti ? '<p class="text-muted small"><strong>Ingredienti:</strong> ' + ingredienti + '</p>' : ''}
                     <p class="text-primary fw-bold">${prezzo}</p>
+                    <p class="text-muted small">Tempo: ${tempo} min</p>
                     <button class="btn btn-outline-primary w-100" onclick="aggiungiCarrello('${p._id}', '${p.nome.replace(/'/g, "\\'")}', ${p.prezzo || 0}, '${immagine}', '${p.categoria || ''}', '${p.ristoranteId || ''}', '${ristorante.replace(/'/g, "\\'")}')">
                         Aggiungi al Carrello
                     </button>
@@ -77,7 +80,7 @@ function mostraPiatti(piatti) {
 }
 
 //la funzione aggiungi carrello fa si che se viene selezionato un piatto venga aggiunto al carrello nel localStorage
-function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, ristoranteNome) {
+function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, ristoranteNome, tempo) {
     let carrello = JSON.parse(localStorage.getItem('carrello') || '[]');
     
     // FIX: Impedisce ordini misti
@@ -101,6 +104,7 @@ function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, rist
             strCategory: categoria,
             ristoranteId: ristoranteId,
             ristoranteNome: ristoranteNome,
+            tempo: parseInt(tempo),
             quantita: 1
         });
     }

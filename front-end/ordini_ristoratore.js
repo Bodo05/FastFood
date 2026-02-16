@@ -64,7 +64,7 @@ async function caricaOrdini() {
             <div class="col-md-4">
                 <div class="card h-100 shadow-sm">
                     <div class="card-header d-flex justify-content-between">
-                        <span class="fw-bold">#${ordine._id.toUpperCase()}</span>
+                        <span class="fw-bold">#${String(ordine._id).slice(-6).toUpperCase()}</span>
                         <span class="badge st-${ordine.stato}">${ordine.stato.replace('_', ' ')}</span>
                     </div>
                     <div class="card-body">

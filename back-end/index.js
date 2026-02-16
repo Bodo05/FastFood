@@ -504,7 +504,7 @@ app.get("/ricerca/luogo", async (req, res) => {
 app.get("/ricerca/allergene", async (req, res) => {
     // #swagger.description = "Ricerca esclusione allergene"
     const q = req.query.q || "";
-    // se strimga vuota restituisco tutti i piatti
+    //se strimga vuota restituisco tutti i piatti
     if (!q) {
         const tutti = await db.collection('piatti').find({ ristoranteId: { $ne: null } }).toArray();
         return res.json(tutti.map(p => ({ ...p, tipo: 'piatto' })));
@@ -575,9 +575,9 @@ app.post("/ordine", async (req, res) => {
             
             if (infoRist && infoRist.lat && coordsC) {
                 const dist = calcolaDistanza(infoRist.lat, infoRist.lon, coordsC.lat, coordsC.lon);
-                const distReale = dist * 1.4;
-                tempoViaggio = Math.ceil(distReale * 2) + 5;
-                costoConsegna = 2.00 + (distReale * 0.50);
+                const distEffettiva = dist * 1.4;
+                tempoViaggio = Math.ceil(distEffettiva * 2) + 5;
+                costoConsegna = 2.00 + (distEffettiva * 0.50);
             } else {
                 tempoViaggio = 15;
                 costoConsegna = 5;
@@ -585,7 +585,7 @@ app.post("/ordine", async (req, res) => {
         }
 
         const totaleFinale = parseFloat(totale) + costoConsegna;
-        const durataMs = (tempoPrep + tempoViaggio) * 1000;
+        const durataMs = (tempoPrep + tempoViaggio) * 60 * 1000;
 
         const rData = await db.collection('ristoratori').findOne({ _id: rId });
         const now = new Date();
@@ -627,40 +627,6 @@ app.post("/ordine", async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ message: "Errore ordine" });
-    }
-});
-
-app.post("/ordine/preventivo", async (req, res) => {
-    // #swagger.description = "Preventivo ordine"
-    try {
-        const piatti = req.body.piatti;
-        const rId = req.body.ristoranteId;
-        const indirizzo = req.body.indirizzoConsegna;
-        const tipo = req.body.tipoConsegna;
-
-        let tempoPrep = 15;
-        let tempoViaggio = 0;
-        let costo = 0;
-
-        if (piatti) {
-            tempoPrep = Math.max(...piatti.map(p => parseInt(p.tempo) || 15));
-        }
-
-        if (tipo === 'domicilio' && indirizzo) {
-            const r = await db.collection('ristoratori').findOne({ _id: toObjectId(rId) });
-            const c = await getCoordinates(indirizzo);
-            if (r && r.lat && c) {
-                const dist = calcolaDistanza(r.lat, r.lon, c.lat, c.lon) * 1.4;
-                tempoViaggio = Math.ceil(dist * 2) + 5;
-                costo = Math.max(2, Math.round(dist));
-            } else {
-                tempoViaggio = 20; costo = 5;
-            }
-        }
-
-        res.json({ tempoPreparazione: tempoPrep, tempoViaggio, costoConsegna: costo });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
     }
 });
 
@@ -781,31 +747,86 @@ app.post('/utils/geocode', async (req, res) => {
 });
 
 app.post('/preventivo', async (req, res) => {
-    // #swagger.description = "calcolo costo del preventivo"
-    const { indirizzo, ristoranteId } = req.body;
+    // #swagger.description = "Calcolo preventivo con stima orario (considerando la coda)"
+    const indirizzo = req.body.indirizzo;
+    const ristoranteId = req.body.ristoranteId;
+    const piatti = req.body.piatti;
+    const tipo = req.body.tipo;
+
+    if (!ristoranteId) {
+        return res.status(400).json({ message: "Ristorante mancante" });
+    }
 
     try {
-        const ristorante = await db.collection('ristoratori').findOne({ _id: toObjectId(ristoranteId) });
-        
-        const coordsCliente = await getCoordinates(indirizzo);
-        const coordsRist = await getCoordinates(ristorante.indirizzo);
 
-        if (!coordsCliente || !coordsRist) {
-            return res.status(400).json({ message: "Indirizzo non trovato" });
+        const infoRist = await db.collection('ristoratori').findOne({ _id: toObjectId(ristoranteId) });
+
+        if (!infoRist) {
+            return res.status(404).json({ message: "Ristorante non trovato" });
         }
 
-        const km = calcolaDistanza(
-            coordsCliente.lat, 
-            coordsCliente.lon, 
-            coordsRist.lat, 
-            coordsRist.lon
-        );
-        
-        const costo = 2.00 + (km * 0.50);
+        let tempoPrep = 15;
 
-        res.json({ costo: parseFloat(costo.toFixed(2)) });
+        if (piatti && piatti.length > 0) {
+            const tempi = piatti.map(p => parseInt(p.tempo) || 15);
+            tempoPrep = Math.max(...tempi);
+        }
+
+        let tempoViaggio = 0;
+        let costo = 0;
+
+        if (tipo === 'domicilio') {
+
+            if (!indirizzo) {
+                return res.status(400).json({ message: "Indirizzo mancante" });
+            }
+
+            const coordsC = await getCoordinates(indirizzo);
+
+            if (!infoRist.lat || !coordsC) {
+                return res.status(400).json({ message: "Indirizzo non valido" });
+            }
+
+            const dist = calcolaDistanza(
+                infoRist.lat,
+                infoRist.lon,
+                coordsC.lat,
+                coordsC.lon
+            );
+
+            const distEffettiva = dist * 1.4;
+
+            tempoViaggio = Math.ceil(distEffettiva * 2) + 5;
+            costo = 2.00 + (distEffettiva * 0.50);
+        }
+
+        const durataMs = (tempoPrep + tempoViaggio) * 60 * 1000;
+
+        const now = new Date();
+        let inizio = now;
+
+        if (infoRist.prossimoSlotLibero &&
+            new Date(infoRist.prossimoSlotLibero) > now) {
+
+            inizio = new Date(infoRist.prossimoSlotLibero);
+        }
+
+        const fine = new Date(inizio.getTime() + durataMs);
+
+        const minutiTotali = Math.ceil((fine - now) / (60 * 1000));
+        const orarioFormattato = fine.toLocaleTimeString('it-IT', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        res.json({
+            costo: parseFloat(costo.toFixed(2)),
+            orario: orarioFormattato,
+            minutiTotali: minutiTotali
+        });
 
     } catch (error) {
-        res.status(500).json({ message: "Errore server" });
+        console.error("Errore preventivo:", error);
+        res.status(500).json({ message: "Errore server durante il preventivo" });
     }
 });

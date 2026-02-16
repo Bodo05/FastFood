@@ -111,24 +111,26 @@ function mostraCheckout() {
 function toggleIndirizzo() {
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const div = document.getElementById('divIndirizzo');
-    const box = document.getElementById('boxPreventivo');
     const btnPaga = document.getElementById('btnPaga');
-    
+
     if (tipo === 'domicilio') {
         div.style.display = 'block';
-        //se domicilio, disabilito finchè non preme inserisci
+
         if (!indirizzoConfermato) {
             btnPaga.disabled = true;
         }
-    } else {
+
+    } else { 
+        // ASPORTO
         div.style.display = 'none';
-        box.style.display = 'none';
-        costoSpedizioneAttuale = 0;
-        aggiornaTotaleVisivo();
-        //se asporto abilito subito
+        indirizzoConfermato = true; 
         btnPaga.disabled = false;
+
+        // Calcolo subito il tempo stimato
+        calcolaPreventivo();
     }
 }
+
 
 //chiamata dal bottone inserisci
 async function confermaIndirizzoManuale() {
@@ -140,10 +142,8 @@ async function confermaIndirizzoManuale() {
         return;
     }
 
-    //chiamo il calcolo preventivo che chiama api
     await calcolaPreventivo();
 
-    //se il costo è valido confermo
     indirizzoConfermato = true;
     msg.style.display = 'block';
     msg.innerText = "Indirizzo confermato: " + indirizzo;
@@ -177,43 +177,63 @@ async function caricaDatiSalvati() {
 }
 
 async function calcolaPreventivo() {
+
+    if (carrello.length === 0) return;
+
     const indirizzo = document.getElementById('indirizzo').value.trim();
     const tipo = document.querySelector('input[name="tipoConsegna"]:checked').value;
     const box = document.getElementById('boxPreventivo');
 
-    if (tipo !== 'domicilio') {
-        costoSpedizioneAttuale = 0;
-        box.style.display = 'none';
-        aggiornaTotaleVisivo();
-        return;
-    }
+    const elCosto = document.getElementById('prevCosto');
+    const elOrario = document.getElementById('prevOrario');
 
-    if (!indirizzo) return;
+    // Mostro box e stato loading
+    box.style.display = 'block';
+    elCosto.innerText = '...';
+    elOrario.innerText = 'Calcolo...';
 
     try {
-        //chiama api preventivo inviando indirizzo e ristorante id e server risponde con il costo
+
         const res = await fetch(API_URL + '/preventivo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                indirizzo: indirizzo,
-                ristoranteId: carrello[0].ristoranteId
+                indirizzo: tipo === 'domicilio' ? indirizzo : null,
+                ristoranteId: carrello[0].ristoranteId,
+                piatti: carrello,
+                tipo: tipo
             })
         });
-            
 
-        if (res.ok) {
-            const dati = await res.json();
-            costoSpedizioneAttuale = parseFloat(dati.costo);
-
-            box.style.display = 'block';
-            document.getElementById('prevCosto').innerText = '€' + costoSpedizioneAttuale.toFixed(2);
-            aggiornaTotaleVisivo();
+        if (!res.ok) {
+            const err = await res.json();
+            showToast(err.message || "Errore preventivo", "warning");
+            box.style.display = 'none';
+            return;
         }
+
+        const dati = await res.json();
+
+        // Spedizione
+        costoSpedizioneAttuale = parseFloat(dati.costo) || 0;
+        elCosto.innerText = '€' + costoSpedizioneAttuale.toFixed(2);
+
+        // Orario pronto
+        elOrario.innerHTML =
+            dati.orario +
+            ' <small class="text-muted fw-normal">(tra ' +
+            dati.minutiTotali +
+            ' min)</small>';
+
+        aggiornaTotaleVisivo();
+
     } catch (e) {
         console.error(e);
+        showToast("Errore calcolo preventivo", "danger");
+        box.style.display = 'none';
     }
 }
+
 
 function aggiornaTotaleVisivo() {
     let totCibo = 0;
@@ -254,7 +274,6 @@ async function inviaOrdine(e) {
 
     let totPiatti = 0;
     carrello.forEach(p => totPiatti += (p.price * p.quantita));
-    const totaleFinale = totPiatti + costoSpedizioneAttuale;
 
     btn.disabled = true;
 
@@ -263,8 +282,7 @@ async function inviaOrdine(e) {
             clienteId: CLIENT_ID,
             ristoranteId: carrello[0].ristoranteId,
             piatti: carrello,
-            totale: totaleFinale,
-            costoSpedizione: costoSpedizioneAttuale,
+            totale: totPiatti,
             tipoConsegna: tipo,
             indirizzoConsegna: tipo === 'domicilio' ? indirizzo : null,
             datiPagamento: {
@@ -282,14 +300,14 @@ async function inviaOrdine(e) {
         });
 
         if (risposta.ok) {
+            const datiOrdine = await risposta.json();
             localStorage.removeItem("carrello");
 
-            //messaggio a schermo di avvenuta ordinazione
             const main = document.getElementById('mainContainer');
             main.innerHTML = `
                 <div class="text-center py-5">
                     <h2 class="mb-4">Grazie per il tuo ordine!</h2>
-                    <p class="lead">Abbiamo ricevuto la tua richiesta di <strong>€${totaleFinale.toFixed(2)}</strong>.</p>
+                    <p class="lead">Abbiamo ricevuto la tua richiesta di <strong>€${parseFloat(datiOrdine.totaleFinale).toFixed(2)}</strong>.</p>
                     <p class="text-muted">Il tuo cibo arriverà presto.</p>
                     <a href="cliente.html" class="btn btn-primary mt-4">Torna alla Home</a>
                 </div>

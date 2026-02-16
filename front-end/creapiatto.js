@@ -43,6 +43,7 @@ async function caricaPiatto(id) {
         if (piatto) {
             document.getElementById('nome').value = piatto.nome || piatto.strMeal || '';
             document.getElementById('prezzo').value = piatto.prezzo || '';
+            document.getElementById('tempo').value = piatto.tempo || 15;
             document.getElementById('categoria').value = piatto.categoria || piatto.strCategory || '';
             document.getElementById('thumb').value = piatto.thumb || piatto.strMealThumb || '';
             document.getElementById('descrizione').value = piatto.ingredienti || '';
@@ -61,6 +62,7 @@ async function salvaPiatto() {
     const nome = document.getElementById('nome').value.trim();
     const prezzo = parseFloat(document.getElementById('prezzo').value);
     const categoria = document.getElementById('categoria').value.trim();
+    const tempo = parseInt(document.getElementById('tempo').value) || 15;
     const thumb = document.getElementById('thumb').value.trim();
     const descrizione = document.getElementById('descrizione').value.trim();
 
@@ -77,6 +79,10 @@ async function salvaPiatto() {
         showToast("Inserisci una categoria", "warning");
         return;
     }
+    if (!tempo) {
+        showToast("Inserisci il tempo", "warning");
+        return;
+    }
 
     //creo oggetto
     const dati = {
@@ -84,6 +90,7 @@ async function salvaPiatto() {
             nome: nome,
             prezzo: prezzo,
             categoria: categoria,
+            tempo: tempo,
             thumb: thumb,
             ingredienti: descrizione,
             strMeal: nome,
