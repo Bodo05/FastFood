@@ -187,7 +187,12 @@ app.delete("/cliente/:id", async (req, res) => {
     const id = req.params.id;
     try {
         await db.collection('clienti').deleteOne({ _id: toObjectId(id) });
-        res.json({ message: "Eliminato" });
+        if (result.deletedCount === 1) {
+            res.json({ message: "Profilo cliente eliminato correttamente." });
+        }
+        else{
+            res.status(404).json({ message: "Cliente non trovato." });
+        }
     } catch (error) {
         res.status(500).json({ message: "Errore" });
     }
@@ -228,6 +233,7 @@ app.post("/ristoratore", async (req, res) => {
             createdAt: new Date()
         };
 
+        //prima inserisco nel database e quindi creo id ristoratore
         const result = await db.collection('ristoratori').insertOne(nuovoRistoratore);
         const rId = result.insertedId;
 
@@ -242,6 +248,7 @@ app.post("/ristoratore", async (req, res) => {
                 piattiDaSalvare.push(p);
             }
 
+            //poi se il ristoratore ha selezionato dei piatti inserisco nella collection piatti (cosi ho rID) e poi aggiorno collection ristoratori nel giusto id inserendo i piatti 
             await db.collection('piatti').insertMany(piattiDaSalvare);
             await db.collection('ristoratori').updateOne(
                 { _id: rId }, 
@@ -262,6 +269,7 @@ app.get("/ristoratore/:id", async (req, res) => {
     try {
         const r = await db.collection('ristoratori').findOne({ _id: toObjectId(id) });
         if (r) {
+            //cosi facendo password non visibile nei dati che getto
             delete r.password;
             res.json(r);
         } else {
@@ -291,7 +299,7 @@ app.delete("/ristoratore/:id", async (req, res) => {
     const id = req.params.id;
     try {
         const result = await db.collection('ristoratori').deleteOne({ _id: toObjectId(id) });
-        if (result.deletedCount === 1) {
+        if (result.deletedCount === 1) { //oggetto deleteResult restituito da MongoDB, se counter 1 ha eliminato correttamente
             res.json({ message: "Profilo ristoratore eliminato correttamente." });
         } else {
             res.status(404).json({ message: "Ristoratore non trovato." });
@@ -339,8 +347,7 @@ app.get("/meals", async (req, res) => {
     // #swagger.description = "Lista pubblica piatti"
     try {
         const result = await db.collection('piatti')
-            .find({ ristoranteId: { $ne: null } })
-            .limit(100)
+            .find({ ristoranteId: { $ne: null } }) //diverso da null (not equal)
             .toArray();
         res.json(result);
     } catch (error) {
@@ -402,7 +409,7 @@ app.post("/ristoratore/:id/piatti", async (req, res) => {
 });
 
 app.get("/ristoratore/:id/piatti", async (req, res) => {
-    // #swagger.description = "Menu ristoratore"
+    // #swagger.description = "Restituisce tutti i piatti del ristoratore"
     const id = req.params.id;
     try {
         const result = await db.collection('piatti').find({ ristoranteId: toObjectId(id) }).toArray();
@@ -435,23 +442,24 @@ app.put("/ristoratore/:rId/piatti/:pId", async (req, res) => {
 
 app.get("/ricerca/generale", async (req, res) => {
     // #swagger.description = "Ricerca globale"
-    const q = req.query.q || "";
-    const regex = new RegExp(q, 'i'); 
+    const q = req.query.q || ""; //prendo testo scritto dall'utente
+    const regex = new RegExp(q, 'i'); //case-insensitive
 
     try {
         const piatti = await db.collection('piatti').find({ 
-            ristoranteId: { $ne: null }, 
-            $or: [{ nome: regex }, { categoria: regex }, { ingredienti: regex }] 
+            ristoranteId: { $ne: null }, //se esiste
+            $or: [{ nome: regex }, { categoria: regex }, { ingredienti: regex }] //cerco in 3 campi diversi contemporaneamente
         }).toArray();
 
         const ristoranti = await db.collection('ristoratori').find({ 
-            $or: [{ nomeRistorante: regex }, { indirizzo: regex }] 
+            $or: [{ nomeRistorante: regex }, { indirizzo: regex }] //cerco anche nella collection ristoratori
         }).toArray();
 
+        //il tipo mi serve per poi creare la card ad hoc in base alla tipologia di dato trovato
         const resPiatti = piatti.map(p => { return { ...p, tipo: 'piatto' }; });
         const resRist = ristoranti.map(r => { return { ...r, tipo: 'ristorante' }; });
 
-        res.json([...resPiatti, ...resRist]);
+        res.json([...resPiatti, ...resRist]); //unione dei 2 array per ritornarli
     } catch (error) {
         res.status(500).json({ message: "Errore" });
     }
@@ -747,7 +755,7 @@ app.post('/utils/geocode', async (req, res) => {
 });
 
 app.post('/preventivo', async (req, res) => {
-    // #swagger.description = "Calcolo preventivo con stima orario (considerando la coda)"
+    // #swagger.description = "calcolo preventivo con stima orario (considerando la coda)"
     const indirizzo = req.body.indirizzo;
     const ristoranteId = req.body.ristoranteId;
     const piatti = req.body.piatti;
@@ -758,7 +766,6 @@ app.post('/preventivo', async (req, res) => {
     }
 
     try {
-
         const infoRist = await db.collection('ristoratori').findOne({ _id: toObjectId(ristoranteId) });
 
         if (!infoRist) {
