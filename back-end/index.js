@@ -466,10 +466,10 @@ app.get("/ricerca/ristorante/luogo", async (req, res) => {
 app.get("/ricerca/ristorante/piatto", async (req, res) => {
     // #swagger.description = "Ricerca ristorante per piatto"
     const q = req.query.q;
+    const regex = new RegExp(q, 'i');
     try {
         const result = await db.collection('ristoratori').find({ 
-            "piatti.nome": regex 
-        }).toArray();
+            "piatti.nome": regex }).toArray();
         
         res.json(result.map(r => ({ ...r, tipo: 'ristorante' })));
     } catch (e) { res.status(500).json({ message: "Errore" }); }
