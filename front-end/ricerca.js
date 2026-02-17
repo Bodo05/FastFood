@@ -1,25 +1,35 @@
 //appena carico pagina controllo se ci sono parametri nell'indirizzo
 document.addEventListener('DOMContentLoaded', function() {
-    aggiornaPlaceholder();
+    aggiornaInterfacciaRicerca();
     controllaParametriUrl();
 });
 
-function aggiornaPlaceholder() {
-    //ogni volta che cambio selezione viene chiamata questa funzione che salva
-    //tipologia di ricerca e il testo della ricerca
+function aggiornaInterfacciaRicerca() {
     const tipo = document.getElementById('tipoRicerca').value;
+    const divTesto = document.getElementById('divInputTesto');
+    const divPrezzo = document.getElementById('divInputPrezzo');
     const input = document.getElementById('inputRicerca');
-    
-    const placeholders = {
-        generale: "Es. Pizza, Pasta, Dessert...",
-        ingrediente: "Es. Pomodoro, Mozzarella...",
-        ristorante: "Es. Da Mario, Pizzeria...",
-        luogo: "Es. Milano, Roma...",
-        allergene: "Es. Glutine, Lattosio...",
-        piatto_ristorante: "Es. Carbonara..."
-    };
-    //cambio la scritta di esempio quando cambio tipolgia ricerca
-    input.placeholder = placeholders[tipo] || "Scrivi qui...";
+
+    //gestione visibilità campi
+    if (tipo === 'piatto_prezzo') {
+        divTesto.style.display = 'none';
+        divPrezzo.style.display = 'flex';
+    } else {
+        divTesto.style.display = 'block';
+        divPrezzo.style.display = 'none';
+        
+        const placeholders = {
+            rist_nome: "Es. Ristorante1...",
+            rist_luogo: "Es. Milano...",
+            rist_piatto: "Es. Pasta...",
+            piatto_nome: "Es. Pasta...",
+            piatto_tipo: "Es. Starter...",
+            piatto_ingrediente: "Es. Butter...",
+            piatto_allergie: "Es. Butter..."
+        };
+        //cambio la scritta di esempio quando cambio tipolgia ricerca
+        input.placeholder = placeholders[tipo] || "Cerca...";
+    }
 }
 
 function controllaParametriUrl() {
@@ -30,8 +40,13 @@ function controllaParametriUrl() {
 
     if (ristorante) {
         document.getElementById('inputRicerca').value = ristorante;
-        document.getElementById('tipoRicerca').value = 'ristorante';
-        aggiornaPlaceholder();
+        //imposto manualmente il tipo per la ricerca ristorante da url
+        const select = document.getElementById('tipoRicerca');
+        //cerco se esiste l'opzione specifica, altrimenti default
+        if(select.querySelector('option[value="rist_nome"]')) {
+             select.value = 'rist_nome';
+        }
+        aggiornaInterfacciaRicerca();
         eseguiRicerca();
     } else if (query) {
         document.getElementById('inputRicerca').value = query;
@@ -42,27 +57,39 @@ function controllaParametriUrl() {
 async function eseguiRicerca() {
     //controllo che sia loggato e salvo i parametri di ricerca
     if (checkLogin('cliente') === false) return;
-    const tipo = document.getElementById('tipoRicerca').value;
-    const query = document.getElementById('inputRicerca').value.trim();
-    const container = document.getElementById('containerRisultati');
-
-    if (!query) {
-        showToast("Inserisci qualcosa da cercare!", "warning");
-        return;
-    }
-
-    container.innerHTML = '';
-    let endpoint = '';
     
-    switch (tipo) {
-        case 'generale': endpoint = `/ricerca/generale?q=${query}`; break;
-        case 'ingrediente': endpoint = `/ricerca/ingrediente?q=${query}`; break;
-        case 'ristorante': endpoint = `/ricerca/ristorante?q=${query}`; break;
-        case 'luogo': endpoint = `/ricerca/luogo?q=${query}`; break;
-        case 'allergene': endpoint = `/ricerca/allergene?q=${query}`; break;
-        case 'piatto_ristorante': endpoint = `/ricerca/piatto-ristorante?q=${query}`; break;
+    const tipo = document.getElementById('tipoRicerca').value;
+    const container = document.getElementById('containerRisultati');
+    let endpoint = '';
+
+    //logica prezzo
+    if (tipo === 'piatto_prezzo') {
+        const min = document.getElementById('minPrezzo').value || 0;
+        const max = document.getElementById('maxPrezzo').value || 1000;
+        endpoint = `/ricerca/prezzo?min=${min}&max=${max}`;
+    } 
+    //logica testuale
+    else {
+        const query = document.getElementById('inputRicerca').value.trim();
+        if (!query) {
+            showToast("Inserisci qualcosa da cercare!", "warning");
+            return;
+        }
+
+        //costruisco endpoint in base al tipo di ricerca
+        switch (tipo) {
+            case 'rist_nome': endpoint = `/ricerca/ristorante/nome?q=${query}`; break;
+            case 'rist_luogo': endpoint = `/ricerca/ristorante/luogo?q=${query}`; break;
+            case 'rist_piatto': endpoint = `/ricerca/ristorante/piatto?q=${query}`; break;
+            
+            case 'piatto_nome': endpoint = `/ricerca/piatto/nome?q=${query}`; break;
+            case 'piatto_tipo': endpoint = `/ricerca/piatto/tipologia?q=${query}`; break;
+            case 'piatto_ingrediente': endpoint = `/ricerca/piatto/ingrediente?q=${query}`; break;
+            case 'piatto_allergie': endpoint = `/ricerca/piatto/allergie?q=${query}`; break;
+        }
     }
-    //costruisco endpoint in base al tipo di ricerca
+
+    container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>';
 
     try {
         //chiamo api e salvo in risposta
@@ -75,7 +102,7 @@ async function eseguiRicerca() {
         
     } catch (errore) {
         console.error(errore);
-        container.innerHTML = '<div class="alert alert-danger">Errore di connessione.</div>';
+        container.innerHTML = '<div class="alert alert-danger">Errore di connessione o nessun risultato.</div>';
     }
 }
 
@@ -85,6 +112,7 @@ async function eseguiRicerca() {
 //i singoli piatti
 function mostraRisultati(risultati, tipo) {
     const container = document.getElementById('containerRisultati');
+    container.innerHTML = '';
     
     if (!risultati || risultati.length === 0) {
         container.innerHTML = '<div class="col-12 text-center"><div class="alert alert-warning">Nessun risultato trovato.</div></div>';
@@ -114,8 +142,8 @@ function mostraRisultati(risultati, tipo) {
                 item.piattiMenu.forEach(p => creaCardPiatto(p, container));
             }
         } 
-        // 2. Ristorante Semplice
-        else if (item.nomeRistorante && !item.prezzo) {
+        // 2. Ristorante Semplice (se l'oggetto ha nomeRistorante ma non è un piatto con prezzo)
+        else if (item.tipo === 'ristorante' || (item.nomeRistorante && item.prezzo === undefined)) {
             creaCardRistorante(item, container);
         } 
         // 3. Piatto
@@ -130,12 +158,9 @@ function creaCardPiatto(piatto, container) {
     const nome = piatto.nome || piatto.strMeal || "Senza nome";
     const ristorante = piatto.ristoranteNome || 'Sconosciuto';
     const prezzo = parseFloat(piatto.prezzo || 0).toFixed(2); 
-    
-    //RECUPERO TEMPO O DEFAULT 15
     const tempo = parseInt(piatto.tempo) || 15;
-
-    //RECUPERO DESCRIZIONE E TAGLIO SE TROPPO LUNGA
     let desc = piatto.ingredienti || piatto.strInstructions || "Nessuna descrizione";
+
     if (desc.length > 90) {
         desc = desc.substring(0, 90) + '...';
     }
@@ -202,7 +227,7 @@ function aggiungiCarrello(id, nome, prezzo, thumb, categoria, ristoranteId, rist
     
     let carrello = JSON.parse(localStorage.getItem('carrello') || '[]');
     
-    //CHECK MULTI RISTORANTE
+    //check ordinazione da un solo ristorante
     if (carrello.length > 0 && carrello[0].ristoranteId !== ristoranteId) {
         showToast("Puoi ordinare da un solo ristorante alla volta! Svuota prima il carrello.", "warning");
         return; 

@@ -439,9 +439,9 @@
         }
       }
     },
-    "/ricerca/generale": {
+    "/ricerca/ristorante/nome": {
       "get": {
-        "description": "Ricerca globale",
+        "description": "Ricerca ristorante per nome",
         "parameters": [
           {
             "name": "q",
@@ -459,9 +459,9 @@
         }
       }
     },
-    "/ricerca/ristorante": {
+    "/ricerca/ristorante/luogo": {
       "get": {
-        "description": "Ricerca ristorante e menu",
+        "description": "Ricerca ristorante per luogo",
         "parameters": [
           {
             "name": "q",
@@ -479,69 +479,114 @@
         }
       }
     },
-    "/ricerca/ingrediente": {
-      "get": {
-        "description": "Ricerca per ingrediente",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/ricerca/luogo": {
-      "get": {
-        "description": "Ricerca per luogo",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/ricerca/allergene": {
-      "get": {
-        "description": "Ricerca esclusione allergene",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/ricerca/piatto-ristorante": {
+    "/ricerca/ristorante/piatto": {
       "get": {
         "description": "Ricerca ristorante per piatto",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/ricerca/piatto/nome": {
+      "get": {
+        "description": "Ricerca piatto per nome",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/ricerca/piatto/tipologia": {
+      "get": {
+        "description": "Ricerca piatto per categoria",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/ricerca/prezzo": {
+      "get": {
+        "description": "Ricerca piatto per prezzo",
+        "parameters": [
+          {
+            "name": "min",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/ricerca/piatto/ingrediente": {
+      "get": {
+        "description": "Ricerca piatto per ingrediente",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/ricerca/piatto/allergie": {
+      "get": {
+        "description": "Ricerca piatto per esclusione di allergie",
         "parameters": [
           {
             "name": "q",

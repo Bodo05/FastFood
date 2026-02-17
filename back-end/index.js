@@ -440,119 +440,106 @@ app.put("/ristoratore/:rId/piatti/:pId", async (req, res) => {
     }
 });
 
-app.get("/ricerca/generale", async (req, res) => {
-    // #swagger.description = "Ricerca globale"
-    const q = req.query.q || ""; //prendo testo scritto dall'utente
-    const regex = new RegExp(q, 'i'); //case-insensitive
-
+app.get("/ricerca/ristorante/nome", async (req, res) => {
+    // #swagger.description = "Ricerca ristorante per nome"
+    const q = req.query.q;
+    const regex = new RegExp(q, 'i');
     try {
-        const piatti = await db.collection('piatti').find({ 
-            ristoranteId: { $ne: null }, //se esiste
-            $or: [{ nome: regex }, { categoria: regex }, { ingredienti: regex }] //cerco in 3 campi diversi contemporaneamente
-        }).toArray();
-
-        const ristoranti = await db.collection('ristoratori').find({ 
-            $or: [{ nomeRistorante: regex }, { indirizzo: regex }] //cerco anche nella collection ristoratori
-        }).toArray();
-
-        //il tipo mi serve per poi creare la card ad hoc in base alla tipologia di dato trovato
-        const resPiatti = piatti.map(p => { return { ...p, tipo: 'piatto' }; });
-        const resRist = ristoranti.map(r => { return { ...r, tipo: 'ristorante' }; });
-
-        res.json([...resPiatti, ...resRist]); //unione dei 2 array per ritornarli
-    } catch (error) {
-        res.status(500).json({ message: "Errore" });
-    }
+        const result = await db.collection('ristoratori').find({ nomeRistorante: regex }).toArray();
+        res.json(result.map(r => ({ ...r, tipo: 'ristorante' })));
+    } catch (e) { res.status(500).json({ message: "Errore" }); }
 });
 
-app.get("/ricerca/ristorante", async (req, res) => {
-    // #swagger.description = "Ricerca ristorante e menu"
-    const q = req.query.q || "";
+app.get("/ricerca/ristorante/luogo", async (req, res) => {
+    // #swagger.description = "Ricerca ristorante per luogo"
+    const q = req.query.q;
+    const regex = new RegExp(q, 'i');
     try {
-        const risultati = await db.collection('ristoratori').aggregate([
-            { $match: { nomeRistorante: new RegExp(q, 'i') } },
-            { $lookup: { from: 'piatti', localField: '_id', foreignField: 'ristoranteId', as: 'piattiMenu' } }
-        ]).toArray();
-
-        const output = risultati.map(r => { return { ...r, tipo: 'ristorante' }; });
-        res.json(output);
-    } catch (error) {
-        res.status(500).json({ message: "Errore" });
-    }
+        const result = await db.collection('ristoratori').find({ indirizzo: regex }).toArray();
+        res.json(result.map(r => ({ ...r, tipo: 'ristorante' })));
+    } catch (e) { res.status(500).json({ message: "Errore" }); }
 });
 
-app.get("/ricerca/ingrediente", async (req, res) => {
-    // #swagger.description = "Ricerca per ingrediente"
-    const q = req.query.q || "";
-    try {
-        const risultati = await db.collection('piatti').find({ 
-            ristoranteId: { $ne: null }, 
-            ingredienti: new RegExp(q, 'i') 
-        }).toArray();
-        res.json(risultati.map(p => { return { ...p, tipo: 'piatto' }; }));
-    } catch (error) {
-        res.status(500).json({ message: "Errore" });
-    }
-});
 
-app.get("/ricerca/luogo", async (req, res) => {
-    // #swagger.description = "Ricerca per luogo"
-    const q = req.query.q || "";
-    try {
-        const risultati = await db.collection('ristoratori').aggregate([
-            { $match: { indirizzo: new RegExp(q, 'i') } },
-            { $lookup: { from: 'piatti', localField: '_id', foreignField: 'ristoranteId', as: 'piattiMenu' } }
-        ]).toArray();
-        res.json(risultati.map(r => { return { ...r, tipo: 'ristorante' }; }));
-    } catch (error) {
-        res.status(500).json({ message: "Errore" });
-    }
-});
-
-app.get("/ricerca/allergene", async (req, res) => {
-    // #swagger.description = "Ricerca esclusione allergene"
-    const q = req.query.q || "";
-    //se strimga vuota restituisco tutti i piatti
-    if (!q) {
-        const tutti = await db.collection('piatti').find({ ristoranteId: { $ne: null } }).toArray();
-        return res.json(tutti.map(p => ({ ...p, tipo: 'piatto' })));
-    }
-    try {
-        const risultati = await db.collection('piatti').find({ 
-            ristoranteId: { $ne: null }, 
-            ingredienti: { $not: new RegExp(q, 'i') } 
-        }).toArray();
-        res.json(risultati.map(p => { return { ...p, tipo: 'piatto' }; }));
-    } catch (error) {
-        res.status(500).json({ message: "Errore" });
-    }
-});
-
-app.get("/ricerca/piatto-ristorante", async (req, res) => {
+app.get("/ricerca/ristorante/piatto", async (req, res) => {
     // #swagger.description = "Ricerca ristorante per piatto"
-    const q = req.query.q || "";
+    const q = req.query.q;
+    // Uso l'aggregazione per trovare i ristoranti che hanno quel piatto nel menu
     try {
-        const risultati = await db.collection('piatti').aggregate([
-            { $match: { nome: new RegExp(q, 'i'), ristoranteId: { $ne: null } } },
-            { $group: { 
-                _id: "$ristoranteId", 
-                ristoranteNome: { $first: "$ristoranteNome" }, 
-                indirizzo: { $first: "$indirizzoRistorante" }, 
-                piatti: { $push: "$$ROOT" } 
-            }},
-            { $project: { 
-                tipo: "ristorante", 
-                nomeRistorante: "$ristoranteNome", 
-                indirizzo: "$indirizzo", 
-                piattiMenu: "$piatti" 
-            }}
+        const result = await db.collection('ristoratori').aggregate([
+            { $lookup: { from: 'piatti', localField: '_id', foreignField: 'ristoranteId', as: 'menu' } },
+            { $match: { "menu.nome": new RegExp(q, 'i') } }
         ]).toArray();
-        res.json(risultati);
-    } catch (error) {
-        res.status(500).json({ message: "Errore" });
-    }
+        
+        res.json(result.map(r => ({ ...r, tipo: 'ristorante' })));
+    } catch (e) { res.status(500).json({ message: "Errore" }); }
 });
 
+
+app.get("/ricerca/piatto/nome", async (req, res) => {
+    // #swagger.description = "Ricerca piatto per nome"
+    const regex = new RegExp(req.query.q, 'i');
+    try {
+        const result = await db.collection('piatti').find({ 
+            ristoranteId: { $ne: null }, 
+            nome: regex 
+        }).toArray();
+        res.json(result.map(p => ({ ...p, tipo: 'piatto' })));
+    } catch (e) { res.status(500).json({ message: "Errore" }); }
+});
+
+
+app.get("/ricerca/piatto/tipologia", async (req, res) => {
+    // #swagger.description = "Ricerca piatto per categoria"
+    const regex = new RegExp(req.query.q, 'i');
+    try {
+        const result = await db.collection('piatti').find({ 
+            ristoranteId: { $ne: null }, 
+            categoria: regex 
+        }).toArray();
+        res.json(result.map(p => ({ ...p, tipo: 'piatto' })));
+    } catch (e) { res.status(500).json({ message: "Errore" }); }
+});
+
+
+app.get("/ricerca/prezzo", async (req, res) => {
+    // #swagger.description = "Ricerca piatto per prezzo"
+    const min = parseFloat(req.query.min) || 0;
+    const max = parseFloat(req.query.max) || 10000;
+    try {
+        const result = await db.collection('piatti').find({ 
+            ristoranteId: { $ne: null }, 
+            prezzo: { $gte: min, $lte: max } 
+        }).toArray();
+        res.json(result.map(p => ({ ...p, tipo: 'piatto' })));
+    } catch (e) { res.status(500).json({ message: "Errore" }); }
+});
+
+
+app.get("/ricerca/piatto/ingrediente", async (req, res) => {
+    // #swagger.description = "Ricerca piatto per ingrediente"
+    const regex = new RegExp(req.query.q, 'i');
+    try {
+        const result = await db.collection('piatti').find({ 
+            ristoranteId: { $ne: null }, 
+            ingredienti: regex
+        }).toArray();
+        res.json(result.map(p => ({ ...p, tipo: 'piatto' })));
+    } catch (e) { res.status(500).json({ message: "Errore" }); }
+});
+
+
+app.get("/ricerca/piatto/allergie", async (req, res) => {
+    // #swagger.description = "Ricerca piatto per esclusione di allergie"
+    const regex = new RegExp(req.query.q, 'i');
+    try {
+        const result = await db.collection('piatti').find({ 
+            ristoranteId: { $ne: null }, 
+            ingredienti: { $not: regex } 
+        }).toArray();
+        res.json(result.map(p => ({ ...p, tipo: 'piatto' })));
+    } catch (e) { res.status(500).json({ message: "Errore" }); }
+});
 app.post("/ordine", async (req, res) => {
     // #swagger.description = "Salva ordine"
     const clienteId = req.body.clienteId;
