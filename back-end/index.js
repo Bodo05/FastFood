@@ -428,11 +428,13 @@ app.put("/ristoratore/:rId/piatti/:pId", async (req, res) => {
     try {
         await db.collection('piatti').updateOne(
             { _id: toObjectId(pId) }, 
-            { $set: dati }
+            { $set: dati } //sovrascrive i campi vecchi con quelli che sono in dati
         );
         await db.collection('ristoratori').updateOne(
-            { _id: toObjectId(rId), "piatti._id": toObjectId(pId) },
-            { $set: { "piatti.$": { ...dati, _id: toObjectId(pId) } } }
+            { _id: toObjectId(rId), "piatti._id": toObjectId(pId) }, //trova il ristoratore con _id: ... che ha al suo
+                                                                    //interno un piatto con id pId
+            { $set: { "piatti.$": { ...dati, _id: toObjectId(pId) } } } //modifica il piatto trovato precedentemente ($)
+                                                                        //con i nuovi datu e facendo si che id resti quello originale
         );
         res.json({ message: "Aggiornato" });
     } catch (error) {
@@ -443,7 +445,7 @@ app.put("/ristoratore/:rId/piatti/:pId", async (req, res) => {
 app.get("/ricerca/ristorante/nome", async (req, res) => {
     // #swagger.description = "Ricerca ristorante per nome"
     const q = req.query.q;
-    const regex = new RegExp(q, 'i');
+    const regex = new RegExp(q, 'i'); //regex case-insensitive
     try {
         const result = await db.collection('ristoratori').find({ nomeRistorante: regex }).toArray();
         res.json(result.map(r => ({ ...r, tipo: 'ristorante' })));
@@ -540,6 +542,30 @@ app.get("/ricerca/piatto/allergie", async (req, res) => {
         res.json(result.map(p => ({ ...p, tipo: 'piatto' })));
     } catch (e) { res.status(500).json({ message: "Errore" }); }
 });
+
+app.get("/ricerca/ristorante/dettaglio", async (req, res) => {
+    // #swagger.description = "dettaglio completo ristorante con piatti (per Vedi Menu)"
+    const q = req.query.q; 
+    
+    try {
+        const result = await db.collection('ristoratori').aggregate([
+            { $match: { nomeRistorante: q } }, //cerco nome esatto del ristorante
+            {
+                $lookup: {
+                    from: 'piatti',            //cerco nella collection piatti
+                    localField: '_id',         //confrontando id della collection ristoratori
+                    foreignField: 'ristoranteId', //con id nella collection piatti
+                    as: 'piattiMenu'           //qui metto i risultati
+                }
+            }
+        ]).toArray();
+        
+        res.json(result.map(r => ({ ...r, tipo: 'ristorante' })));
+    } catch (e) { 
+        res.status(500).json({ message: "Errore" }); 
+    }
+});
+
 app.post("/ordine", async (req, res) => {
     // #swagger.description = "Salva ordine"
     const clienteId = req.body.clienteId;
