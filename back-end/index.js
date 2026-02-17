@@ -376,7 +376,6 @@ app.get("/categorie-catalogo", async (req, res) => {
 });
 
 app.post("/ristoratore/:id/piatti", async (req, res) => {
-    // #swagger.description = "Aggiungi piatto"
     const idRistoratore = req.params.id;
     const datiPiatto = req.body.piatto;
 
@@ -389,6 +388,7 @@ app.post("/ristoratore/:id/piatti", async (req, res) => {
         
         const nuovoPiatto = {
             ...datiPiatto,
+            ingredienti: datiPiatto.ingredienti || "",
             ristoranteId: toObjectId(idRistoratore),
             ristoranteNome: infoRist.nomeRistorante,
             indirizzoRistorante: infoRist.indirizzo,
