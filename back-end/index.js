@@ -9,7 +9,7 @@ const fs = require('fs'); //usato per gestione file (es. popolazione database al
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger_output.json');
 
-const port = 3000;
+const port = 3001;
 const app = express();
 
 // API per documentazione api
@@ -466,12 +466,10 @@ app.get("/ricerca/ristorante/luogo", async (req, res) => {
 app.get("/ricerca/ristorante/piatto", async (req, res) => {
     // #swagger.description = "Ricerca ristorante per piatto"
     const q = req.query.q;
-    // Uso l'aggregazione per trovare i ristoranti che hanno quel piatto nel menu
     try {
-        const result = await db.collection('ristoratori').aggregate([
-            { $lookup: { from: 'piatti', localField: '_id', foreignField: 'ristoranteId', as: 'menu' } },
-            { $match: { "menu.nome": new RegExp(q, 'i') } }
-        ]).toArray();
+        const result = await db.collection('ristoratori').find({ 
+            "piatti.nome": regex 
+        }).toArray();
         
         res.json(result.map(r => ({ ...r, tipo: 'ristorante' })));
     } catch (e) { res.status(500).json({ message: "Errore" }); }
@@ -504,7 +502,7 @@ app.get("/ricerca/piatto/tipologia", async (req, res) => {
 });
 
 
-app.get("/ricerca/prezzo", async (req, res) => {
+app.get("/ricerca/piatto/prezzo", async (req, res) => {
     // #swagger.description = "Ricerca piatto per prezzo"
     const min = parseFloat(req.query.min) || 0;
     const max = parseFloat(req.query.max) || 10000;
@@ -545,22 +543,14 @@ app.get("/ricerca/piatto/allergie", async (req, res) => {
 
 app.get("/ricerca/ristorante/dettaglio", async (req, res) => {
     // #swagger.description = "dettaglio completo ristorante con piatti (per Vedi Menu)"
-    const q = req.query.q; 
+    const nome = req.query.q; 
     
     try {
-        const result = await db.collection('ristoratori').aggregate([
-            { $match: { nomeRistorante: q } }, //cerco nome esatto del ristorante
-            {
-                $lookup: {
-                    from: 'piatti',            //cerco nella collection piatti
-                    localField: '_id',         //confrontando id della collection ristoratori
-                    foreignField: 'ristoranteId', //con id nella collection piatti
-                    as: 'piattiMenu'           //qui metto i risultati
-                }
-            }
-        ]).toArray();
-        
-        res.json(result.map(r => ({ ...r, tipo: 'ristorante' })));
+        const r = await db.collection('ristoratori').findOne({ nomeRistorante: nome });
+        if (r) {
+            r.piattiMenu = r.piatti;
+        }
+        res.json([{ ...r, tipo: 'ristorante' }]);
     } catch (e) { 
         res.status(500).json({ message: "Errore" }); 
     }
@@ -685,6 +675,7 @@ app.get("/ristoratore/:id/ordini", async (req, res) => {
     // #swagger.description = "Coda ordini ristoratore"
     const id = req.params.id;
     try {
+        //tramite lookup recupero nome cognome telefono del cliente partendo dall'id salvato nell'ordine
         const ordini = await db.collection('ordini').aggregate([
             { $match: { ristoranteId: toObjectId(id) } },
             { $sort: { orarioInizio: 1 } },
@@ -696,8 +687,12 @@ app.get("/ristoratore/:id/ordini", async (req, res) => {
                     as: 'clienteInfo' 
                 } 
             },
+            //spacchetto l'array
             { $unwind: '$clienteInfo' }
         ]).toArray();
+
+        //a questo punto ogni ordine presenta il campo cliente info (array) che contiene l'oggetto
+        //cliente trovato
 
         const now = new Date();
         const output = ordini.map(o => {

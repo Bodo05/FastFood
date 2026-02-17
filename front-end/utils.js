@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://localhost:3001'; //base url comune
 
 
 //funzione che permette di mostrare i risultati delle operazioni fatte (primo parametro messaggio, secondo il tipo che gestisce il colore del popup)

@@ -9,7 +9,7 @@ const doc = {
     description: 'Documentazione API generata automaticamente per il progetto Fast Food',
     version: '1.0.0',
   },
-  host: 'localhost:3000',
+  host: 'localhost:3001',
   schemes: ['http'],
 };
 

@@ -59,7 +59,7 @@ async function caricaOrdini() {
                     listaPiatti += '<li>' + nomePiatto + ' x' + quantitaPiatto + '</li>';
                 }
             }
-            //costrusco la card in base ai parametri
+            //costrusco la card in base ai parametri (ordine info costruito nel backend)
             html += `
             <div class="col-md-4">
                 <div class="card h-100 shadow-sm">

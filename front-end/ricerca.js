@@ -60,7 +60,7 @@ async function eseguiRicerca(tipoForzato = null) {
     if (tipo === 'piatto_prezzo') {
         const min = document.getElementById('minPrezzo').value || 0;
         const max = document.getElementById('maxPrezzo').value || 1000;
-        endpoint = `/ricerca/prezzo?min=${min}&max=${max}`;
+        endpoint = `/ricerca/piatto/prezzo?min=${min}&max=${max}`;
     } else {
         const query = document.getElementById('inputRicerca').value.trim();
         if (!query) {
