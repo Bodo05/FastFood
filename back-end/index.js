@@ -595,8 +595,10 @@ app.post("/ordine", async (req, res) => {
             }
         }
 
+        //durata nel db in ms per facilitare i test
         const totaleFinale = parseFloat(totale) + costoConsegna;
-        const durataMs = (tempoPrep + tempoViaggio) * 60 * 1000;
+        const minutiTotali = tempoPrep + tempoViaggio;
+        durataMs = minutiTotali * 1000;
 
         const rData = await db.collection('ristoratori').findOne({ _id: rId });
         const now = new Date();
@@ -632,8 +634,12 @@ app.post("/ordine", async (req, res) => {
         
         res.json({ 
             _id: result.insertedId, 
-            costoConsegna, tempoPreparazione: tempoPrep, tempoViaggio, 
-            orarioInizio: inizio, orarioFine: fine, totaleFinale 
+            costoConsegna, 
+            tempoPreparazione: tempoPrep, 
+            tempoViaggio: tempoViaggio, 
+            orarioInizio: inizio, 
+            orarioFine: fine, 
+            totaleFinale: totaleFinale
         });
 
     } catch (error) {
@@ -815,21 +821,23 @@ app.post('/preventivo', async (req, res) => {
             costo = 2.00 + (distEffettiva * 0.50);
         }
 
-        const durataMs = (tempoPrep + tempoViaggio) * 1000;
+        // la gestione dei minuti avviene la somma tra i tempi di preparazione
+        // e quello di viaggio, partendo dal primo tempo disponibile in coda
+        //la durata dell'ordine nel db è in millisecondi per questioni di test
+        const minutiRichiesti = tempoPrep + tempoViaggio;
 
         const now = new Date();
         let inizio = now;
 
-        if (infoRist.prossimoSlotLibero &&
-            new Date(infoRist.prossimoSlotLibero) > now) {
+        if (infoRist.prossimoSlotLibero && new Date(infoRist.prossimoSlotLibero) > now) {
 
             inizio = new Date(infoRist.prossimoSlotLibero);
         }
 
-        const fine = new Date(inizio.getTime() + durataMs);
+        const fine = new Date(inizio.getTime() + (minutiRichiesti * 1000));
 
-        const minutiTotali = Math.ceil((fine - now) / (60 * 1000));
-        const orarioFormattato = fine.toLocaleTimeString('it-IT', {
+        const minutiTotali = Math.ceil((fine - now) / (1000));
+        const orarioFormattato = new Date(now.getTime() + (minutiTotali * 60 * 1000)).toLocaleTimeString('it-IT', {
             hour: '2-digit',
             minute: '2-digit'
         });

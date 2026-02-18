@@ -117,8 +117,7 @@ function mostraPiatti(piatti) {
         var immagine = piatto.thumb || piatto.strMealThumb || 'https://via.placeholder.com/150';
         var idPiatto = piatto._id || piatto.idMeal;
 
-        // --- RECUPERO INGREDIENTI ROBUSTO ---
-        // Cerco gli ingredienti ovunque possano essere (array, stringa o campi sparsi)
+        //cerco gli ingredienti
         var lista = [];
         if (piatto.ingredients && Array.isArray(piatto.ingredients)) {
              lista = piatto.ingredients;
@@ -134,8 +133,8 @@ function mostraPiatti(piatti) {
         }
         var ingredientiString = lista.join(', ');
         
-        // Codifico la stringa e gestisco gli apostrofi per non rompere l'HTML onclick
-        var ingredientiEncoded = encodeURIComponent(ingredientiString).replace(/'/g, "%27");
+        //codifico la stringa e gestisco gli apostrofi per non rompere l'HTML onclick
+        var ingredientiOk = encodeURIComponent(ingredientiString).replace(/'/g, "%27");
 
         var nomeNormalizzato = nome.toLowerCase();
         
@@ -166,7 +165,7 @@ function mostraPiatti(piatti) {
             var catOk = categoria.replace(/'/g, "\\'");
             
             // Passo ingredientiEncoded alla funzione aggiungiPiatto
-            htmlBottone = '<button class="btn btn-sm btn-success w-100" onclick="aggiungiPiatto(\'' + idPiatto + '\', \'' + nomeOk + '\', \'' + catOk + '\', \'' + immagine + '\', \'' + ingredientiEncoded + '\')">+ Aggiungi al menu</button>';
+            htmlBottone = '<button class="btn btn-sm btn-success w-100" onclick="aggiungiPiatto(\'' + idPiatto + '\', \'' + nomeOk + '\', \'' + catOk + '\', \'' + immagine + '\', \'' + ingredientiOk + '\')">+ Aggiungi al menu</button>';
         }
 
         var card = document.createElement('div');
@@ -191,13 +190,13 @@ function mostraPiatti(piatti) {
 }
 
 //funzione che permette di aggiungere al database il piatto
-async function aggiungiPiatto(idPiatto, nome, categoria, immagine, ingredientiEncoded) {
+async function aggiungiPiatto(idPiatto, nome, categoria, immagine, ingredientiOk) {
     //prendo il prezzo di input
     var inputPrezzo = document.getElementById('prezzo-' + idPiatto);
     var prezzo = inputPrezzo ? inputPrezzo.value : '';
     
     //decodifico gli ingredienti ricevuti
-    var ingredienti = ingredientiEncoded ? decodeURIComponent(ingredientiEncoded) : '';
+    var ingredienti = ingredientiOk ? decodeURIComponent(ingredientiOk) : '';
     
     var prezzoNumero = parseFloat(prezzo);
     //controllo validità del valore inserito
@@ -214,7 +213,7 @@ async function aggiungiPiatto(idPiatto, nome, categoria, immagine, ingredientiEn
             prezzo: prezzoNumero,
             categoria: categoria,
             thumb: immagine,
-            ingredienti: ingredienti, // <--- Qui assicuro che gli ingredienti ci siano
+            ingredienti: ingredienti,
             strMeal: nome,
             strCategory: categoria,
             strMealThumb: immagine,
