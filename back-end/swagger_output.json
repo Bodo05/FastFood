@@ -5,7 +5,7 @@
     "description": "Documentazione API generata automaticamente per il progetto Fast Food",
     "version": "1.0.0"
   },
-  "host": "localhost:3000",
+  "host": "localhost:3001",
   "basePath": "/",
   "schemes": [
     "http"
@@ -347,7 +347,7 @@
     },
     "/ristoratore/{id}/piatti": {
       "post": {
-        "description": "Aggiungi piatto",
+        "description": "",
         "parameters": [
           {
             "name": "id",
@@ -539,7 +539,7 @@
         }
       }
     },
-    "/ricerca/prezzo": {
+    "/ricerca/piatto/prezzo": {
       "get": {
         "description": "Ricerca piatto per prezzo",
         "parameters": [
@@ -587,6 +587,26 @@
     "/ricerca/piatto/allergie": {
       "get": {
         "description": "Ricerca piatto per esclusione di allergie",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/ricerca/ristorante/dettaglio": {
+      "get": {
+        "description": "dettaglio completo ristorante con piatti (per Vedi Menu)",
         "parameters": [
           {
             "name": "q",
