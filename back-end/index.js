@@ -687,10 +687,10 @@ app.get("/ristoratore/:id/ordini", async (req, res) => {
             { $sort: { orarioInizio: 1 } },
             { 
                 $lookup: { 
-                    from: 'clienti', 
-                    localField: 'clienteId', 
-                    foreignField: '_id', 
-                    as: 'clienteInfo' 
+                    from: 'clienti', //collection in cui si va a cercare
+                    localField: 'clienteId', //id collection ordini
+                    foreignField: '_id',  //id nella collection clienti
+                    as: 'clienteInfo' //dove salvo le info
                 } 
             },
             //spacchetto l'array

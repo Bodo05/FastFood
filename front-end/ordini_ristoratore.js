@@ -92,6 +92,7 @@ async function caricaOrdini() {
             </div>
             `;
         });
+        
 
         //applica l'html al mio container
         container.innerHTML = html;
